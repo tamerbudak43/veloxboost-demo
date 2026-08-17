@@ -1,37 +1,29 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Users, Zap } from 'lucide-react'
-import { PartnerAvatar } from '@/components/velox/network/partner-avatar'
+import { ChevronDown, ChevronRight, Users } from 'lucide-react'
 import { formatUSDT } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { SponsorTreeNode } from '@/lib/network/types'
-
-const statusMeta: Record<
-  SponsorTreeNode['status'],
-  { tone: 'success' | 'active' | 'neutral'; label: string }
-> = {
-  qualified: { tone: 'success', label: 'Nitelikli' },
-  active: { tone: 'active', label: 'Aktif' },
-  inactive: { tone: 'neutral', label: 'Pasif' },
-}
 
 /** A single node card in the org-chart style tree. */
 function NodeCard({
   node,
   open,
   onToggle,
+  placement,
 }: {
   node: SponsorTreeNode
   open: boolean
   onToggle: () => void
+  placement?: 'Sol' | 'Sağ'
 }) {
   const hasChildren = node.children.length > 0
 
   return (
     <div
       className={cn(
-        'relative flex w-32 flex-col items-center rounded-lg border px-2 pb-2 pt-3 text-center transition-colors',
+        'relative flex w-36 flex-col rounded-md border px-2.5 py-2 text-left transition-colors',
         node.isSelf
           ? 'border-transparent [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(135deg,#0877e8,#18d4e8)_border-box]'
           : node.isStrongLeg
@@ -41,45 +33,28 @@ function NodeCard({
               : 'border-border bg-card',
       )}
     >
-      {(node.isSelf || node.isStrongLeg) && (
+      {node.isSelf && (
         <span
           className={cn(
             'absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide',
-            node.isSelf
-              ? 'bg-electric/15 text-bright'
-              : 'inline-flex items-center gap-0.5 bg-cyan/15 text-light-cyan',
+            'bg-electric/15 text-bright',
           )}
         >
-          {node.isSelf ? 'Siz' : (
-            <>
-              <Zap className="size-2" /> Uzun bacak
-            </>
-          )}
+          Siz
         </span>
       )}
 
-      <PartnerAvatar name={node.name} seed={node.veloxId} className="size-8 text-[10px]" />
-
-      <span className="mt-1 line-clamp-1 text-xs font-semibold text-foreground">{node.name}</span>
-      <span className="font-mono text-[8px] text-muted-foreground">{node.veloxId}</span>
-
-      <div className="mt-1">
-        <span className={cn('inline-flex rounded-full px-1.5 py-0.5 text-[8px] font-semibold', statusMeta[node.status].tone === 'success' ? 'bg-emerald-500/10 text-emerald-300' : statusMeta[node.status].tone === 'active' ? 'bg-cyan/10 text-cyan' : 'bg-elevated text-muted-foreground')}>{node.career}</span>
-      </div>
-
-      <div className="mt-1.5 w-full rounded bg-elevated px-1 py-1">
-        <div className="font-mono text-[10px] tabular-nums text-foreground">
-          {formatUSDT(node.teamVolume, 0)}
-        </div>
-        <div className="text-[8px] text-muted-foreground">ekip hacmi</div>
-      </div>
+      <span className={cn('line-clamp-1 text-[10px] font-semibold', node.isSelf ? 'text-cyan' : 'text-foreground')}>{node.name}</span>
+      <span className="mt-0.5 text-[9px] text-muted-foreground">{node.isSelf ? 'Ana hesap' : `${placement ?? 'Alt'} bacak`} · {node.career}</span>
+      <span className="mt-1 font-mono text-[9px] tabular-nums text-secondary-foreground">Yatırım: {formatUSDT(node.personalVolume, 0)}</span>
+      <span className="max-w-full truncate font-mono text-[8px] text-muted-foreground">{node.veloxId} · Ekip: {formatUSDT(node.teamVolume, 0)}</span>
 
       {hasChildren && (
         <button
           type="button"
           onClick={onToggle}
           aria-label={open ? 'Daralt' : 'Genişlet'}
-          className="mt-1.5 inline-flex items-center gap-0.5 rounded border border-border bg-elevated px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="mt-1 inline-flex w-fit items-center gap-0.5 rounded border border-border bg-elevated px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <Users className="size-2.5" />
           {node.directCount} direkt
@@ -91,14 +66,15 @@ function NodeCard({
 }
 
 /** Recursive org-chart node: card on top, connector lines, children row below. */
-function TreeNode({ node, defaultOpen }: { node: SponsorTreeNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(Boolean(defaultOpen))
+function TreeNode({ node, depth = 0, placement }: { node: SponsorTreeNode; depth?: number; placement?: 'Sol' | 'Sağ' }) {
+  // Root + two matrix rows are open on first view: 1 → 2 → 4.
+  const [open, setOpen] = useState(depth < 2)
   const hasChildren = node.children.length > 0
   const showChildren = hasChildren && open
 
   return (
     <div className="flex flex-col items-center">
-      <NodeCard node={node} open={open} onToggle={() => setOpen((o) => !o)} />
+      <NodeCard node={node} open={open} onToggle={() => setOpen((o) => !o)} placement={placement} />
 
       {showChildren && (
         <>
@@ -125,7 +101,7 @@ function TreeNode({ node, defaultOpen }: { node: SponsorTreeNode; defaultOpen?: 
                       <div className="absolute left-1/2 top-0 h-px w-1/2 bg-border" />
                     )}
                   </div>
-                  <TreeNode node={child} />
+                  <TreeNode node={child} depth={depth + 1} placement={i === 0 ? 'Sol' : 'Sağ'} />
                 </div>
               )
             })}
@@ -148,7 +124,7 @@ export function SponsorTree({ root }: { root: SponsorTreeNode | null }) {
   return (
     <div className="overflow-x-auto p-3">
       <div className="flex min-w-max justify-center">
-        <TreeNode node={root} defaultOpen />
+        <TreeNode node={root} />
       </div>
     </div>
   )
