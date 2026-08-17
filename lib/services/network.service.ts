@@ -42,6 +42,8 @@ export function networkSummary(
     teamVolume: vol.teamVolume,
     strongLegVolume: vol.strongLegVolume,
     otherLegVolume: vol.otherLegVolume,
+    longLegVolume: vol.strongLegVolume,
+    shortLegVolume: vol.otherLegVolume,
     currentCareer,
   }
 }

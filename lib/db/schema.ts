@@ -146,6 +146,22 @@ export const careerRequirement = pgTable('career_requirement', {
   requiredOtherLegVolume: numeric('requiredOtherLegVolume').notNull().default('0'),
 })
 
+// Cashback eligibility is deliberately independent from career advancement.
+// A member can qualify for a career without a cashback tier, and vice versa.
+export const cashbackTier = pgTable('cashback_tier', {
+  id: serial('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  displayOrder: integer('displayOrder').notNull().default(0),
+  fromDepth: integer('fromDepth').notNull().default(1),
+  toDepth: integer('toDepth').notNull().default(1),
+  requiredTeamVolume: numeric('requiredTeamVolume').notNull().default('0'),
+  requiredDirectPartners: integer('requiredDirectPartners').notNull().default(0),
+  cashbackAmount: numeric('cashbackAmount').notNull().default('0'),
+  dailyWithdrawalLimit: numeric('dailyWithdrawalLimit').notNull().default('0'),
+  enabled: boolean('enabled').notNull().default(true),
+})
+
 // Commission depth ladder 1..33 — configurable rate + required career.
 export const commissionLevel = pgTable('commission_level', {
   id: serial('id').primaryKey(),

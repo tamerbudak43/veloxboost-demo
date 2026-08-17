@@ -1,9 +1,9 @@
 import 'server-only'
 import { asc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { career, careerRequirement, commissionLevel } from '@/lib/db/schema'
+import { cashbackTier, career, careerRequirement, commissionLevel } from '@/lib/db/schema'
 import { safeNumber } from '@/lib/format'
-import type { CareerDef } from './types'
+import type { CashbackTierDef, CareerDef } from './types'
 import { demoCommissionPlan } from './demo-commission-plan'
 
 /** Loads the full career ladder with requirements, ordered by rank. */
@@ -56,6 +56,24 @@ export async function loadCommissionLevels(): Promise<CommissionLevelDef[]> {
     percentage: safeNumber(r.percentage),
     requiredCareerCode: r.requiredCareerCode,
     enabled: r.enabled,
+  }))
+}
+
+/** Loads the standalone cashback tier configuration. */
+export async function loadCashbackTiers(): Promise<CashbackTierDef[]> {
+  const rows = await db.select().from(cashbackTier).orderBy(asc(cashbackTier.displayOrder))
+  return rows.map((tier) => ({
+    id: tier.id,
+    code: tier.code,
+    name: tier.name,
+    displayOrder: tier.displayOrder,
+    fromDepth: tier.fromDepth,
+    toDepth: tier.toDepth,
+    requiredTeamVolume: safeNumber(tier.requiredTeamVolume),
+    requiredDirectPartners: tier.requiredDirectPartners,
+    cashbackAmount: safeNumber(tier.cashbackAmount),
+    dailyWithdrawalLimit: safeNumber(tier.dailyWithdrawalLimit),
+    enabled: tier.enabled,
   }))
 }
 

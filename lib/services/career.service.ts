@@ -86,9 +86,9 @@ export function evaluateCareer(
     req('personalInvestment', 'Kişisel Yatırım', metrics.personalInvestment, r.requiredPersonalInvestment, 'usdt'),
     req('personalVolume', 'Kişisel Hacim', metrics.personalVolume, r.requiredPersonalVolume, 'usdt'),
     req('directVolume', 'Direkt Hacim', metrics.directVolume, r.requiredDirectVolume, 'usdt'),
-    req('teamVolume', 'Takım Hacmi', metrics.teamVolume, r.requiredTeamVolume, 'usdt'),
-    req('strongLeg', 'Güçlü Bacak', metrics.strongLegVolume, r.requiredStrongLegVolume, 'usdt'),
-    req('otherLegs', 'Diğer Bacaklar', metrics.otherLegVolume, r.requiredOtherLegVolume, 'usdt'),
+    // Team volume belongs to the separate cashback qualification engine.
+    req('longLeg', 'Uzun bacak', metrics.strongLegVolume, r.requiredStrongLegVolume, 'usdt'),
+    req('shortLegs', 'Kısa bacaklar toplamı', metrics.otherLegVolume, r.requiredOtherLegVolume, 'usdt'),
   ]
 
   const active = requirements.filter((x) => x.required > 0)
@@ -97,5 +97,5 @@ export function evaluateCareer(
       ? 100
       : clampProgress(active.reduce((acc, x) => acc + x.progress, 0) / active.length)
 
-  return { currentCareer, nextCareer, progress, requirements }
+  return { currentCareer, nextCareer, progress, requirements: active }
 }

@@ -3,12 +3,136 @@
 import { revalidatePath } from 'next/cache'
 import { and, asc, count, desc, eq, gte, ilike, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { account, career, careerRequirement, careerRewardAccrual, commissionLevel, demoLedgerEntry, investmentReceipt, member, networkClosure, session, user as authUser, verification, withdrawal } from '@/lib/db/schema'
+import { account, cashbackTier, career, careerRequirement, careerRewardAccrual, commissionLevel, demoLedgerEntry, investmentReceipt, member, networkClosure, session, user as authUser, verification, withdrawal } from '@/lib/db/schema'
 import { getSessionMember, requireAdmin } from '@/lib/admin-auth'
 import { safeNumber } from '@/lib/format'
 import { demoCommissionPlan } from '@/lib/network/demo-commission-plan'
 import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 import { DEMO_DAILY_DISTRIBUTION_AVERAGE } from '@/lib/network/demo-market-scenario'
+
+type CareerPlan = {
+  code: string
+  name: string
+  displayOrder: number
+  unlockedDepth: number
+  dailyWithdrawalLimit: number
+  careerReward: number
+  requiredPersonalPartners: number
+  requiredActivePartners: number
+  requiredQualifiedPartners: number
+  requiredPersonalInvestment: number
+  requiredPersonalVolume: number
+  requiredDirectVolume: number
+  requiredTeamVolume: number
+  requiredStrongLegVolume: number
+  requiredOtherLegVolume: number
+}
+
+type CashbackPlan = {
+  code: string
+  name: string
+  displayOrder: number
+  fromDepth: number
+  toDepth: number
+  requiredTeamVolume: number
+  requiredDirectPartners: number
+  cashbackAmount: number
+  dailyWithdrawalLimit: number
+}
+
+const ONETRADE_CASHBACK_PLAN: CashbackPlan[] = [
+  { code: 'BRONZE', name: 'Bronze', displayOrder: 1, fromDepth: 1, toDepth: 3, requiredTeamVolume: 5000, requiredDirectPartners: 2, cashbackAmount: 100, dailyWithdrawalLimit: 1000 },
+  { code: 'SILVER', name: 'Silver', displayOrder: 2, fromDepth: 4, toDepth: 6, requiredTeamVolume: 15000, requiredDirectPartners: 3, cashbackAmount: 300, dailyWithdrawalLimit: 2000 },
+  { code: 'GOLD', name: 'Gold', displayOrder: 3, fromDepth: 7, toDepth: 9, requiredTeamVolume: 50000, requiredDirectPartners: 4, cashbackAmount: 1000, dailyWithdrawalLimit: 3000 },
+  { code: 'PLATINUM', name: 'Platinum', displayOrder: 4, fromDepth: 10, toDepth: 12, requiredTeamVolume: 150000, requiredDirectPartners: 5, cashbackAmount: 3000, dailyWithdrawalLimit: 4000 },
+  { code: 'DIAMOND', name: 'Diamond', displayOrder: 5, fromDepth: 13, toDepth: 15, requiredTeamVolume: 450000, requiredDirectPartners: 6, cashbackAmount: 9000, dailyWithdrawalLimit: 5000 },
+  { code: 'BLUE_DIAMOND', name: 'Blue Diamond', displayOrder: 6, fromDepth: 16, toDepth: 18, requiredTeamVolume: 1500000, requiredDirectPartners: 7, cashbackAmount: 30000, dailyWithdrawalLimit: 6000 },
+  { code: 'RED_DIAMOND', name: 'Red Diamond', displayOrder: 7, fromDepth: 19, toDepth: 21, requiredTeamVolume: 4500000, requiredDirectPartners: 8, cashbackAmount: 90000, dailyWithdrawalLimit: 7000 },
+  { code: 'BLACK_DIAMOND', name: 'Black Diamond', displayOrder: 8, fromDepth: 22, toDepth: 24, requiredTeamVolume: 15000000, requiredDirectPartners: 9, cashbackAmount: 300000, dailyWithdrawalLimit: 8000 },
+  { code: 'AMBASSADOR', name: 'Ambassador', displayOrder: 9, fromDepth: 25, toDepth: 27, requiredTeamVolume: 45000000, requiredDirectPartners: 10, cashbackAmount: 900000, dailyWithdrawalLimit: 9000 },
+  { code: 'CROWN_AMBASSADOR', name: 'Crown Ambassador', displayOrder: 10, fromDepth: 28, toDepth: 33, requiredTeamVolume: 150000000, requiredDirectPartners: 11, cashbackAmount: 2700000, dailyWithdrawalLimit: 10000 },
+]
+
+async function applyOneTradeCashbackPlanDefaults() {
+  const existing = await db.select().from(cashbackTier)
+  const byCode = new Map(existing.map((tier) => [tier.code, tier]))
+  for (const plan of ONETRADE_CASHBACK_PLAN) {
+    const values = {
+      code: plan.code,
+      name: plan.name,
+      displayOrder: plan.displayOrder,
+      fromDepth: plan.fromDepth,
+      toDepth: plan.toDepth,
+      requiredTeamVolume: String(plan.requiredTeamVolume),
+      requiredDirectPartners: plan.requiredDirectPartners,
+      cashbackAmount: String(plan.cashbackAmount),
+      dailyWithdrawalLimit: String(plan.dailyWithdrawalLimit),
+      enabled: true,
+    }
+    const current = byCode.get(plan.code)
+    if (current) await db.update(cashbackTier).set(values).where(eq(cashbackTier.id, current.id))
+    else await db.insert(cashbackTier).values(values)
+  }
+}
+
+/** OneTrade reference ladder, used only as configurable demo defaults. */
+const ONETRADE_CAREER_PLAN: CareerPlan[] = [
+  { code: 'STARTER', name: 'Starter', displayOrder: 1, unlockedDepth: 3, dailyWithdrawalLimit: 500, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 0, requiredQualifiedPartners: 0, requiredPersonalInvestment: 0, requiredPersonalVolume: 0, requiredDirectVolume: 0, requiredTeamVolume: 0, requiredStrongLegVolume: 0, requiredOtherLegVolume: 0 },
+  { code: 'BRONZE', name: 'Bronze', displayOrder: 2, unlockedDepth: 5, dailyWithdrawalLimit: 1000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 2, requiredQualifiedPartners: 0, requiredPersonalInvestment: 500, requiredPersonalVolume: 500, requiredDirectVolume: 1000, requiredTeamVolume: 0, requiredStrongLegVolume: 600, requiredOtherLegVolume: 400 },
+  { code: 'SILVER', name: 'Silver', displayOrder: 3, unlockedDepth: 8, dailyWithdrawalLimit: 2000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 3, requiredQualifiedPartners: 0, requiredPersonalInvestment: 1000, requiredPersonalVolume: 1000, requiredDirectVolume: 3000, requiredTeamVolume: 0, requiredStrongLegVolume: 1800, requiredOtherLegVolume: 1200 },
+  { code: 'GOLD', name: 'Gold', displayOrder: 4, unlockedDepth: 10, dailyWithdrawalLimit: 3000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 4, requiredQualifiedPartners: 0, requiredPersonalInvestment: 2500, requiredPersonalVolume: 2500, requiredDirectVolume: 7500, requiredTeamVolume: 0, requiredStrongLegVolume: 4500, requiredOtherLegVolume: 3000 },
+  { code: 'PLATINUM', name: 'Platinum', displayOrder: 5, unlockedDepth: 15, dailyWithdrawalLimit: 4000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 5, requiredQualifiedPartners: 0, requiredPersonalInvestment: 5000, requiredPersonalVolume: 5000, requiredDirectVolume: 15000, requiredTeamVolume: 0, requiredStrongLegVolume: 9000, requiredOtherLegVolume: 6000 },
+  { code: 'DIAMOND', name: 'Diamond', displayOrder: 6, unlockedDepth: 20, dailyWithdrawalLimit: 5000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 6, requiredQualifiedPartners: 0, requiredPersonalInvestment: 10000, requiredPersonalVolume: 10000, requiredDirectVolume: 30000, requiredTeamVolume: 0, requiredStrongLegVolume: 18000, requiredOtherLegVolume: 12000 },
+  { code: 'BLUE_DIAMOND', name: 'Blue Diamond', displayOrder: 7, unlockedDepth: 25, dailyWithdrawalLimit: 6000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 7, requiredQualifiedPartners: 0, requiredPersonalInvestment: 20000, requiredPersonalVolume: 20000, requiredDirectVolume: 60000, requiredTeamVolume: 0, requiredStrongLegVolume: 36000, requiredOtherLegVolume: 24000 },
+  { code: 'RED_DIAMOND', name: 'Red Diamond', displayOrder: 8, unlockedDepth: 28, dailyWithdrawalLimit: 7000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 8, requiredQualifiedPartners: 0, requiredPersonalInvestment: 30000, requiredPersonalVolume: 30000, requiredDirectVolume: 100000, requiredTeamVolume: 0, requiredStrongLegVolume: 60000, requiredOtherLegVolume: 40000 },
+  { code: 'BLACK_DIAMOND', name: 'Black Diamond', displayOrder: 9, unlockedDepth: 30, dailyWithdrawalLimit: 8000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 9, requiredQualifiedPartners: 0, requiredPersonalInvestment: 50000, requiredPersonalVolume: 50000, requiredDirectVolume: 180000, requiredTeamVolume: 0, requiredStrongLegVolume: 108000, requiredOtherLegVolume: 72000 },
+  { code: 'AMBASSADOR', name: 'Ambassador', displayOrder: 10, unlockedDepth: 33, dailyWithdrawalLimit: 9000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 10, requiredQualifiedPartners: 0, requiredPersonalInvestment: 75000, requiredPersonalVolume: 75000, requiredDirectVolume: 300000, requiredTeamVolume: 0, requiredStrongLegVolume: 180000, requiredOtherLegVolume: 120000 },
+  { code: 'CROWN_AMBASSADOR', name: 'Crown Ambassador', displayOrder: 11, unlockedDepth: 33, dailyWithdrawalLimit: 10000, careerReward: 0, requiredPersonalPartners: 0, requiredActivePartners: 11, requiredQualifiedPartners: 0, requiredPersonalInvestment: 100000, requiredPersonalVolume: 100000, requiredDirectVolume: 500000, requiredTeamVolume: 0, requiredStrongLegVolume: 300000, requiredOtherLegVolume: 200000 },
+]
+
+async function applyOneTradeCareerPlanDefaults() {
+  const existingCareers = await db.select().from(career)
+  const requirements = await db.select().from(careerRequirement)
+  const careersByCode = new Map(existingCareers.map((item) => [item.code, item]))
+  const requirementsByCareer = new Map(requirements.map((item) => [item.careerId, item]))
+
+  for (const plan of ONETRADE_CAREER_PLAN) {
+    const values = {
+      code: plan.code,
+      name: plan.name,
+      displayOrder: plan.displayOrder,
+      unlockedDepth: plan.unlockedDepth,
+      dailyWithdrawalLimit: String(plan.dailyWithdrawalLimit),
+      careerReward: String(plan.careerReward),
+      enabled: true,
+    }
+    const current = careersByCode.get(plan.code)
+    const careerId = current
+      ? current.id
+      : (await db.insert(career).values(values).returning({ id: career.id }))[0]?.id
+
+    if (!careerId) throw new Error(`${plan.name} kariyeri oluşturulamadı.`)
+    if (current) await db.update(career).set(values).where(eq(career.id, careerId))
+
+    const requirementValues = {
+      careerId,
+      requiredPersonalPartners: plan.requiredPersonalPartners,
+      requiredActivePartners: plan.requiredActivePartners,
+      requiredQualifiedPartners: plan.requiredQualifiedPartners,
+      requiredPersonalInvestment: String(plan.requiredPersonalInvestment),
+      requiredPersonalVolume: String(plan.requiredPersonalVolume),
+      requiredDirectVolume: String(plan.requiredDirectVolume),
+      requiredTeamVolume: String(plan.requiredTeamVolume),
+      requiredStrongLegVolume: String(plan.requiredStrongLegVolume),
+      requiredOtherLegVolume: String(plan.requiredOtherLegVolume),
+    }
+    if (requirementsByCareer.has(careerId)) {
+      await db.update(careerRequirement).set(requirementValues).where(eq(careerRequirement.careerId, careerId))
+    } else {
+      await db.insert(careerRequirement).values(requirementValues)
+    }
+  }
+}
 
 /** Lightweight check used by the admin login form after sign-in. */
 export async function checkAdminAccess(): Promise<boolean> {
@@ -20,20 +144,7 @@ export async function checkAdminAccess(): Promise<boolean> {
 async function ensureInitialAdminConfig() {
   const existing = await db.select({ total: count() }).from(career)
   if ((existing[0]?.total ?? 0) === 0) {
-    const created = await db.insert(career).values([
-      { code: 'STARTER', name: 'Starter', displayOrder: 1, unlockedDepth: 3, dailyWithdrawalLimit: '500', careerReward: '0' },
-      { code: 'BRONZE', name: 'Bronze', displayOrder: 2, unlockedDepth: 5, dailyWithdrawalLimit: '1000', careerReward: '100' },
-      { code: 'SILVER', name: 'Silver', displayOrder: 3, unlockedDepth: 8, dailyWithdrawalLimit: '2500', careerReward: '300' },
-      { code: 'GOLD', name: 'Gold', displayOrder: 4, unlockedDepth: 10, dailyWithdrawalLimit: '5000', careerReward: '1000' },
-      { code: 'PLATINUM', name: 'Platinum', displayOrder: 5, unlockedDepth: 15, dailyWithdrawalLimit: '10000', careerReward: '3000' },
-      { code: 'DIAMOND', name: 'Diamond', displayOrder: 6, unlockedDepth: 20, dailyWithdrawalLimit: '25000', careerReward: '9000' },
-      { code: 'BLUE_DIAMOND', name: 'Blue Diamond', displayOrder: 7, unlockedDepth: 25, dailyWithdrawalLimit: '50000', careerReward: '30000' },
-      { code: 'RED_DIAMOND', name: 'Red Diamond', displayOrder: 8, unlockedDepth: 28, dailyWithdrawalLimit: '75000', careerReward: '90000' },
-      { code: 'BLACK_DIAMOND', name: 'Black Diamond', displayOrder: 9, unlockedDepth: 30, dailyWithdrawalLimit: '100000', careerReward: '300000' },
-      { code: 'AMBASSADOR', name: 'Ambassador', displayOrder: 10, unlockedDepth: 33, dailyWithdrawalLimit: '250000', careerReward: '900000' },
-      { code: 'CROWN_AMBASSADOR', name: 'Crown Ambassador', displayOrder: 11, unlockedDepth: 33, dailyWithdrawalLimit: '1000000', careerReward: '2700000' },
-    ]).returning({ id: career.id })
-    await db.insert(careerRequirement).values(created.map((row) => ({ careerId: row.id })))
+    await applyOneTradeCareerPlanDefaults()
   } else {
     // Existing installations may already have the original ten-rank ladder.
     // Insert RED DIAMOND once and preserve every admin-configured threshold
@@ -290,6 +401,42 @@ export async function loadCareerAdmin() {
     careerReward: safeNumber(c.careerReward),
     requirement: reqs.find((r) => r.careerId === c.id) ?? null,
   }))
+}
+
+export async function loadCashbackAdmin() {
+  await requireAdmin()
+  return db.select().from(cashbackTier).orderBy(asc(cashbackTier.displayOrder))
+}
+
+/** Applies the agreed OneTrade-style demo ladder after explicit admin approval. */
+export async function applyOneTradeCareerPlan() {
+  await requireAdmin()
+  await applyOneTradeCareerPlanDefaults()
+  await applyOneTradeCashbackPlanDefaults()
+  revalidatePath('/admin/careers')
+  revalidatePath('/admin/commissions')
+  revalidatePath('/career')
+  revalidatePath('/network')
+}
+
+export async function updateCashbackTier(input: {
+  id: number
+  requiredTeamVolume: number
+  requiredDirectPartners: number
+  cashbackAmount: number
+  dailyWithdrawalLimit: number
+  enabled: boolean
+}) {
+  await requireAdmin()
+  await db.update(cashbackTier).set({
+    requiredTeamVolume: String(Math.max(0, safeNumber(input.requiredTeamVolume))),
+    requiredDirectPartners: Math.max(0, Math.floor(safeNumber(input.requiredDirectPartners))),
+    cashbackAmount: String(Math.max(0, safeNumber(input.cashbackAmount))),
+    dailyWithdrawalLimit: String(Math.max(0, safeNumber(input.dailyWithdrawalLimit))),
+    enabled: Boolean(input.enabled),
+  }).where(eq(cashbackTier.id, input.id))
+  revalidatePath('/admin/careers')
+  revalidatePath('/network')
 }
 
 export async function updateCareer(input: {

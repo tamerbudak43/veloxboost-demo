@@ -1,7 +1,7 @@
 'use server'
 
 import { getMyProfile } from '@/app/actions/member'
-import { loadCareers, loadCommissionLevels, unlockedDepthFor } from '@/lib/network/config'
+import { loadCareers, loadCashbackTiers, loadCommissionLevels, unlockedDepthFor } from '@/lib/network/config'
 import { db } from '@/lib/db'
 import { investmentReceipt, member, networkClosure } from '@/lib/db/schema'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
@@ -18,6 +18,8 @@ import { totalEarnings } from '@/lib/services/commission.service'
 import { ensureCareerRewardAccrual } from '@/lib/services/career-reward.service'
 import { getDemoMarketScenarios } from '@/lib/network/demo-market-scenario'
 import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
+import { evaluateCashback } from '@/lib/services/cashback.service'
+import { buildDemoFinanceSummary } from '@/lib/services/demo-finance.service'
 
 /**
  * Assembles the network explorer from the signed-in member and the persisted
@@ -83,7 +85,7 @@ export async function getNetworkData() {
   const members = hasPersistedDemo ? persistedMembers : simulation?.members ?? persistedMembers
   const currentCareer = (hasPersistedDemo || simulation) ? simulation?.simulation.projectedCareer ?? profile.career : profile.career
 
-  const [careers, commissionLevels] = await Promise.all([loadCareers(), loadCommissionLevels()])
+  const [careers, commissionLevels, cashbackTiers] = await Promise.all([loadCareers(), loadCommissionLevels(), loadCashbackTiers()])
   // The simulated view is a training dataset and exposes all configured
   // depths for review. It never changes the member's persisted career.
   const unlockedDepth = (hasPersistedDemo || simulation) ? 33 : unlockedDepthFor(careers, currentCareer)
@@ -109,6 +111,17 @@ export async function getNetworkData() {
     otherLegVolume: summary.otherLegVolume,
   }
   const careerProgress = evaluateCareer(metrics, careers, currentCareer)
+  const cashbackQualification = evaluateCashback(summary.teamVolume, summary.activePartners, cashbackTiers)
+  const activeScenario = getDemoMarketScenarios().find((scenario) => scenario.active) ?? getDemoMarketScenarios()[0]
+  const networkCommissionAllocation = depthRows
+    .filter((row) => row.unlocked)
+    .reduce((total, row) => total + row.investment * ((activeScenario?.rate ?? 0) / 100) * (row.commissionRate / 100), 0)
+  const demoFinance = buildDemoFinanceSummary({
+    teamVolume: summary.teamVolume,
+    distributionRate: activeScenario?.rate ?? 0,
+    networkCommissionAllocation,
+    cashbackAllocation: cashbackQualification.currentTier?.cashbackAmount ?? 0,
+  })
 
   return {
     referralCode: profile.referralCode,
@@ -122,6 +135,8 @@ export async function getNetworkData() {
     careerProgress,
     unlockedDepth,
     marketScenarios: getDemoMarketScenarios(),
+    cashbackQualification,
+    demoFinance,
     simulation: simulation?.simulation ?? null,
   }
 }

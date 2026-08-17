@@ -77,6 +77,10 @@ export interface NetworkSummary {
   teamVolume: number
   strongLegVolume: number
   otherLegVolume: number
+  /** Largest direct sponsor branch. */
+  longLegVolume: number
+  /** Sum of all direct branches except the longest branch. */
+  shortLegVolume: number
   currentCareer: string
 }
 
@@ -119,6 +123,39 @@ export interface CareerProgress {
   nextCareer: CareerDef | null
   progress: number
   requirements: RequirementProgress[]
+}
+
+/** Independently configurable cashback qualification tier. */
+export interface CashbackTierDef {
+  id: number
+  code: string
+  name: string
+  displayOrder: number
+  fromDepth: number
+  toDepth: number
+  requiredTeamVolume: number
+  requiredDirectPartners: number
+  cashbackAmount: number
+  dailyWithdrawalLimit: number
+  enabled: boolean
+}
+
+export interface CashbackQualification {
+  currentTier: CashbackTierDef | null
+  nextTier: CashbackTierDef | null
+  eligible: boolean
+  requirements: RequirementProgress[]
+}
+
+/** Transparent demo-only finance projection; never a wallet or payment record. */
+export interface DemoFinanceSummary {
+  grossSystemIncome: number
+  memberYieldAllocation: number
+  networkCommissionAllocation: number
+  cashbackAllocation: number
+  totalPlannedDistribution: number
+  simulatedReserve: number
+  simulatedPaymentQueue: number
 }
 
 /** Network commission (earnings) row. */
