@@ -17,7 +17,11 @@ export function AdminInvestmentReceipts({ initialReceipts }: { initialReceipts: 
     setError(null)
     setBusyId(receipt.id)
     try {
-      await confirmInvestmentReceipt(receipt.id, hashes[receipt.id] ?? '')
+      const result = await confirmInvestmentReceipt(receipt.id, hashes[receipt.id] ?? '')
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
       setReceipts((current) => current.filter((item) => item.id !== receipt.id))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Yatırım doğrulanamadı.')

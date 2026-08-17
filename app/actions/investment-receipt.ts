@@ -94,15 +94,32 @@ export async function getPendingInvestmentReceipts(): Promise<AdminInvestmentRec
 
 /** Admin-only confirmation. The blockchain transaction hash is required so
  * a pending instruction cannot be presented as an actual completed deposit. */
-export async function confirmInvestmentReceipt(receiptId: number, transactionHash: string) {
+export type ReceiptConfirmationResult =
+  | { ok: true; receipt: InvestmentReceipt }
+  | { ok: false; error: string }
+
+/**
+ * Admin-only confirmation. Expected validation failures are returned as data
+ * instead of being thrown: production Server Actions intentionally mask thrown
+ * errors, which otherwise appears in the UI as React error #441.
+ */
+export async function confirmInvestmentReceipt(
+  receiptId: number,
+  transactionHash: string,
+): Promise<ReceiptConfirmationResult> {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Oturum bulunamadı.')
+  if (!session?.user) return { ok: false, error: 'Oturum bulunamadı. Lütfen yeniden giriş yapın.' }
 
   const [operator] = await db.select().from(member).where(eq(member.userId, session.user.id)).limit(1)
-  if (operator?.role !== 'admin') throw new Error('Bu işlem için yönetici yetkisi gerekir.')
-  const hash = transactionHash.trim()
+  if (operator?.role !== 'admin') {
+    return { ok: false, error: 'Bu işlem için yönetici yetkisi gerekir.' }
+  }
+
+  // Wallets and explorers commonly display the hash with a 0x prefix. Keep a
+  // normalized 64-character value in the database while accepting either form.
+  const hash = transactionHash.trim().replace(/^0x/i, '')
   if (!/^[a-fA-F0-9]{64}$/.test(hash)) {
-    throw new Error('Geçerli 64 karakterlik blok zinciri işlem hash değeri girin.')
+    return { ok: false, error: '0x öneki isteğe bağlı olacak şekilde geçerli 64 karakterlik işlem hash değeri girin.' }
   }
 
   const [updated] = await db
@@ -111,6 +128,6 @@ export async function confirmInvestmentReceipt(receiptId: number, transactionHas
     .where(and(eq(investmentReceipt.id, receiptId), eq(investmentReceipt.status, 'pending')))
     .returning()
 
-  if (!updated) throw new Error('Bekleyen yatırım talimatı bulunamadı.')
-  return updated
+  if (!updated) return { ok: false, error: 'Bekleyen yatırım talimatı bulunamadı veya daha önce işleme alındı.' }
+  return { ok: true, receipt: updated }
 }
