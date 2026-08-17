@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Users, ArrowUpRight, ArrowDownRight, Waves, TrendingUp, Clock } from 'lucide-react'
+import { Users, ArrowUpRight, ArrowDownRight, Waves, TrendingUp, Clock, FileDown, BarChart3 } from 'lucide-react'
 import { Panel, StatusPill } from '@/components/velox/primitives'
 import { formatUSDT, formatNumber, percentOf, safeArray, safeNumber } from '@/lib/format'
 import type { AdminKpi, WithdrawalRequest } from '@/lib/types'
+import type { DemoDailyReport } from '@/lib/services/demo-report.service'
 
 function KpiCard({
   label,
@@ -47,9 +48,45 @@ function KpiCard({
   )
 }
 
-export function AdminOverview({ kpi, withdrawals }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[] }) {
-  const trend = [] as { day: number; value: number }[]
-  const trendMax = Math.max(...trend.map((t) => safeNumber(t.value)), 1)
+function DemoReportOverview({ daily, endingCash }: { daily: DemoDailyReport[]; endingCash: number }) {
+  const current = daily.at(-1)
+  const chartMax = Math.max(...daily.flatMap((row) => [row.deposits, row.automaticPayments]), 1)
+
+  return (
+    <Panel className="border-cyan/30 p-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-5 py-4">
+        <div>
+          <div className="flex items-center gap-2"><BarChart3 className="size-4 text-cyan" /><h2 className="font-semibold">Faz 1 demo · gün sonu özeti</h2></div>
+          <p className="mt-1 text-xs text-muted-foreground">Yalnızca simülasyon defteri; gerçek ödeme veya cüzdan hareketi oluşturmaz.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a href="/api/admin/demo-reports/finance" className="inline-flex items-center gap-1.5 rounded-md border border-cyan/50 px-2.5 py-1.5 text-xs font-medium text-cyan hover:bg-cyan/10"><FileDown className="size-3.5" /> Finans PDF</a>
+          <a href="/api/admin/demo-reports/finance?format=excel" className="inline-flex items-center gap-1.5 rounded-md border border-cyan/50 px-2.5 py-1.5 text-xs font-medium text-cyan hover:bg-cyan/10"><FileDown className="size-3.5" /> Finans Excel</a>
+          <a href="/api/admin/demo-reports/growth" className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:border-cyan/50 hover:text-foreground"><FileDown className="size-3.5" /> Ağ PDF</a>
+          <a href="/api/admin/demo-reports/growth?format=excel" className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:border-cyan/50 hover:text-foreground"><FileDown className="size-3.5" /> Ağ Excel</a>
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Bugün giriş</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(current?.deposits ?? 0, 2)}</p></div>
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Bugün dağıtım</p><p className="mt-1 font-mono text-lg font-semibold text-light-cyan">{formatUSDT((current?.memberAccrual ?? 0) + (current?.referralExpense ?? 0), 2)}</p></div>
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net gün K/Z</p><p className="mt-1 font-mono text-lg font-semibold text-light-cyan">{formatUSDT(current?.profitLoss ?? 0, 2)}</p></div>
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Kasa devir</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(endingCash, 2)}</p></div>
+      </div>
+
+      <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-[1.2fr_.8fr]">
+        <div>
+          <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-medium">Günlük giriş / otomatik ödeme</h3><span className="text-[11px] text-muted-foreground">USDT · son {daily.length} gün</span></div>
+          {daily.length === 0 ? <div className="py-10 text-center text-sm text-muted-foreground">Demo henüz çalıştırılmadı.</div> : <div className="flex h-36 items-end gap-2">{daily.map((row) => <div key={row.date} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${row.date}: giriş ${formatUSDT(row.deposits, 2)} · ödeme ${formatUSDT(row.automaticPayments, 2)}`}><div className="flex h-28 w-full items-end justify-center gap-1"><div className="w-2 rounded-t bg-cyan" style={{ height: `${Math.max(3, percentOf(row.deposits, chartMax))}%` }} /><div className="w-2 rounded-t bg-electric" style={{ height: `${Math.max(3, percentOf(row.automaticPayments, chartMax))}%` }} /></div><span className="text-[9px] text-muted-foreground">{row.date.slice(5)}</span></div>)}</div>}
+          <div className="mt-2 flex gap-4 text-[10px] text-muted-foreground"><span><i className="mr-1 inline-block size-2 rounded-sm bg-cyan" />Giriş</span><span><i className="mr-1 inline-block size-2 rounded-sm bg-electric" />Otomatik ödeme</span></div>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-4"><h3 className="text-sm font-medium">Ağ büyüme hızı</h3><div className="mt-4 space-y-3">{daily.map((row, index) => { const previous = daily[index - 1]?.cumulativeMembers ?? 0; const growth = previous ? ((row.cumulativeMembers - previous) / previous) * 100 : 0; return <div key={row.date} className="flex items-center justify-between gap-3 text-xs"><span className="text-muted-foreground">{row.date}</span><span>{row.registrations} yeni · {row.cumulativeMembers} ağ</span><span className="font-mono text-light-cyan">{index === 0 ? 'Başlangıç' : `%${formatNumber(growth, 1)}`}</span></div> })}</div></div>
+      </div>
+    </Panel>
+  )
+}
+
+export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; endingCash: number } }) {
   const queue = safeArray<WithdrawalRequest>(withdrawals)
     .filter((w) => w?.status === 'pending')
     .slice(0, 4)
@@ -95,6 +132,8 @@ export function AdminOverview({ kpi, withdrawals }: { kpi: AdminKpi; withdrawals
         />
       </div>
 
+      <DemoReportOverview daily={demoReports.daily} endingCash={demoReports.endingCash} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Volume trend */}
         <Panel className="lg:col-span-2">
@@ -103,14 +142,7 @@ export function AdminOverview({ kpi, withdrawals }: { kpi: AdminKpi; withdrawals
             <StatusPill tone="success">Canlı</StatusPill>
           </div>
           <div className="mt-5 flex h-48 items-stretch gap-1">
-            {trend.map((t) => (
-              <div key={t.day} className="flex flex-1 flex-col justify-end" title={formatUSDT(t.value, 0)}>
-                <div
-                  className="velox-gradient w-full rounded-t transition-all"
-                  style={{ height: `${Math.max(4, percentOf(t.value, trendMax))}%` }}
-                />
-              </div>
-            ))}
+            <div className="m-auto text-sm text-muted-foreground">Operasyon hacmi, demo raporları bölümünde gün gün gösterilir.</div>
           </div>
           <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
             <span>30 gün önce</span>
