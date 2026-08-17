@@ -246,6 +246,7 @@ export async function loadAdminOverview() {
 
 const DEMO_PREFIX = 'demo-sim-'
 const DEMO_RUN_KEY = 'phase-1-growth-v1'
+const DEMO_DIRECT_REFERRAL_RATE = 0.06
 
 /**
  * Irreversible phase-1 reset. It retains only the currently signed-in admin
@@ -361,19 +362,40 @@ export async function seedPhaseOneDemoSimulation() {
     // One deterministic daily financial snapshot per simulated day. These are
     // report-only ledger rows and are never handed to wallet or payment code.
     const now = new Date()
+    const activatedMemberIds = new Set<string>()
+    const unpaidCredits = new Map<string, number>()
+    const addUnpaidCredit = (userId: string, amount: number) => {
+      unpaidCredits.set(userId, Number(((unpaidCredits.get(userId) ?? 0) + amount).toFixed(2)))
+    }
     for (let day = 1; day <= simulation.currentDay; day++) {
       const occurredAt = new Date(now.getTime() - (simulation.currentDay - day) * 86_400_000)
       const active = demoMembers.filter((item) => new Date(item.joinedAt).getTime() <= occurredAt.getTime())
+      const newlyActive = active.filter((item) => !activatedMemberIds.has(item.id))
+      newlyActive.forEach((item) => activatedMemberIds.add(item.id))
       const activeCapital = active.reduce((total, item) => total + item.personalInvestment, 0)
       const gross = Number((activeCapital * 0.026).toFixed(2))
       ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: admin.userId, userName: admin.name, veloxId: admin.veloxId, entryType: 'demo_arbitrage_income', amount: String(gross), status: 'scenario_income', reference: `DEMO-D${day}-ARB`, occurredAt })
+
+      // Referral is a one-off direct-sponsor commission: 6% of the newly
+      // joined member's initial investment. It is not a slice of daily yield.
+      for (const item of newlyActive) {
+        const sponsor = item.sponsorId ? byId.get(item.sponsorId) : null
+        const referral = Number((item.personalInvestment * DEMO_DIRECT_REFERRAL_RATE).toFixed(2))
+        if (referral <= 0 || !sponsor) continue
+        ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: sponsor.id, userName: sponsor.name, veloxId: sponsor.veloxId, entryType: 'demo_referral_commission', amount: String(referral), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-REF6`, occurredAt })
+        addUnpaidCredit(sponsor.id, referral)
+      }
+
       for (const item of active) {
         const accrual = Number((item.personalInvestment * (DEMO_DAILY_DISTRIBUTION_AVERAGE / 100)).toFixed(2))
-        const referral = Number((accrual * 0.06).toFixed(2))
         ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-ACC`, occurredAt })
-        if (referral > 0) ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.sponsorId ?? admin.userId, userName: byId.get(item.sponsorId ?? admin.userId)?.name ?? admin.name, veloxId: byId.get(item.sponsorId ?? admin.userId)?.veloxId ?? admin.veloxId, entryType: 'demo_referral_commission', amount: String(referral), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-REF`, occurredAt })
-        const payout = Number((accrual + referral).toFixed(2))
-        if (payout >= 25) ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_auto_withdrawal', amount: String(-payout), status: 'auto_withdrawn_demo', reference: `DEMO-${item.veloxId}-D${day}-WDL`, occurredAt })
+        addUnpaidCredit(item.id, accrual)
+      }
+      for (const [recipientId, payout] of unpaidCredits) {
+        const recipient = byId.get(recipientId)
+        if (!recipient || payout < 25) continue
+        ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: recipient.id, userName: recipient.name, veloxId: recipient.veloxId, entryType: 'demo_auto_withdrawal', amount: String(-payout), status: 'auto_withdrawn_demo', reference: `DEMO-${recipient.veloxId}-D${day}-WDL`, occurredAt })
+        unpaidCredits.set(recipientId, 0)
       }
     }
     await tx.insert(demoLedgerEntry).values(ledgerRows)

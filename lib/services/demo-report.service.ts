@@ -46,6 +46,7 @@ export async function loadDemoReports() {
   ledger.forEach((row) => dates.add(dayKey(row.occurredAt)))
   const orderedDates = [...dates].sort()
   let cash = 0
+  let paymentQueue = 0
   let cumulativeMembers = 0
   const daily: DemoDailyReport[] = orderedDates.map((date) => {
     const newMembers = members.filter((row) => dayKey(row.createdAt) === date)
@@ -57,7 +58,9 @@ export async function loadDemoReports() {
     const memberAccrual = sum('demo_accrual')
     const referralExpense = sum('demo_referral_commission')
     const automaticPayments = Math.abs(sum('demo_auto_withdrawal'))
-    const paymentQueue = Math.max(0, memberAccrual + referralExpense - automaticPayments)
+    // Pending credits carry forward until the scenario's 25 USDT automatic
+    // withdrawal threshold is reached, matching the demo ledger behaviour.
+    paymentQueue = Math.max(0, paymentQueue + memberAccrual + referralExpense - automaticPayments)
     const openingCash = cash
     cash += deposits + arbitrageGross - automaticPayments
     return {

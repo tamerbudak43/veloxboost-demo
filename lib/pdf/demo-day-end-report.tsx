@@ -9,13 +9,13 @@ export async function renderDemoDayEndReport(data: { daily: DemoDailyReport[]; p
   const current = data.daily.at(-1)
   return renderToBuffer(<Document title="VELOX Demo Gün Sonu Raporu" author="VELOX Demo"><Page size="A4" style={s.page}>
     <Text style={s.title}>DEMO GÜN SONU FİNANS RAPORU</Text><Text style={s.sub}>Senaryo verisi - gerçek ödeme, cüzdan ya da yatırım kaydı değildir.</Text>
-    <Text style={s.note}>Arbitraj brüt getirisi %2,6 senaryo oranıdır. Üye tahakkuku, ağ/referral gideri ve ödeme kuyruğu yalnız raporlama hesaplamasıdır.</Text>
-    <Text style={s.h}>GÜNLÜK FİNANS TABLOSU</Text><Row values={['Tarih', 'Giriş', 'Arb. brüt', 'Üye tah.', 'Ağ/ref.', 'Ödeme', 'K/Z', 'Kasa devir']} />
+    <Text style={s.note}>Arbitraj brüt getirisi %2,6 senaryo oranıdır. Doğrudan sponsor referral komisyonu, yeni referansın ilk yatırım tutarının bir defalık %6'sı olarak ayrı hesaplanır.</Text>
+    <Text style={s.h}>GÜNLÜK FİNANS TABLOSU</Text><Row values={['Tarih', 'Giriş', 'Arb. brüt', 'Üye tah.', 'Ref. %6', 'Ödeme', 'K/Z', 'Kasa devir']} />
     {data.daily.map((row) => <Row key={row.date} values={[row.date, n(row.deposits), n(row.arbitrageGross), n(row.memberAccrual), n(row.referralExpense), n(row.automaticPayments), n(row.profitLoss), n(row.closingCash)]} />)}
     <Text style={s.h}>SON GÜN ÖZETİ - {current?.date ?? 'Veri yok'}</Text>
     {current && <><Row values={['Kasa açılış', n(current.openingCash), 'Devir', n(current.turnover), 'Ödeme kuyruğu', n(current.paymentQueue), 'Kasa kapanış', n(current.closingCash)]} /><Row values={['Toplam kasa', n(data.endingCash), 'Kayıt', String(current.registrations), 'Kümülatif üye', String(current.cumulativeMembers), 'Net K/Z', n(current.profitLoss)]} /></>}
     <Text style={s.h}>ÖDEME / AĞ DETAYI (son 30 kayıt)</Text><Row values={['Tarih', 'Üye', 'SIM ID', 'Tür', 'Tutar', 'Referans']} />
-    {data.payments.slice(-30).reverse().map((item, index) => <Row key={`${item.reference}-${index}`} values={[item.date, item.name, item.veloxId, item.type === 'demo_auto_withdrawal' ? 'Demo oto. çekim' : 'Demo ağ/ref.', n(item.amount), item.reference]} />)}
+    {data.payments.slice(-30).reverse().map((item, index) => <Row key={`${item.reference}-${index}`} values={[item.date, item.name, item.veloxId, item.type === 'demo_auto_withdrawal' ? 'Demo oto. çekim' : 'Doğrudan ref. %6', n(item.amount), item.reference]} />)}
     <Text style={s.footer}>VELOX demo raporu - yalnız eğitim/simülasyon verisi - oluşturma: {new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul' }).format(new Date())}</Text>
   </Page></Document>)
 }

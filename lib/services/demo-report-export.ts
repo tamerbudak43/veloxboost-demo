@@ -25,7 +25,7 @@ export function renderDemoReportCsv(
   rows.push([])
 
   if (kind === 'finance') {
-    rows.push(['Tarih', 'Yeni kayıt', 'Giriş USDT', 'Arbitraj brüt USDT', 'Üye tahakkuku USDT', 'Ağ / referral USDT', 'Otomatik ödeme USDT', 'Ödeme kuyruğu USDT', 'Net K/Z USDT', 'Kasa devir USDT'])
+    rows.push(['Tarih', 'Yeni kayıt', 'Giriş USDT', 'Arbitraj brüt USDT', 'Üye tahakkuku USDT', 'Doğrudan referral %6 USDT', 'Otomatik ödeme USDT', 'Ödeme kuyruğu USDT', 'Net K/Z USDT', 'Kasa devir USDT'])
     data.daily.forEach((row) => rows.push([
       row.date, row.registrations, amount(row.deposits), amount(row.arbitrageGross), amount(row.memberAccrual),
       amount(row.referralExpense), amount(row.automaticPayments), amount(row.paymentQueue), amount(row.profitLoss), amount(row.closingCash),
