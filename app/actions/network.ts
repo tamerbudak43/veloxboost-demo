@@ -16,6 +16,8 @@ import { legSummaries } from '@/lib/services/volume.service'
 import { evaluateCareer, type CareerMetrics } from '@/lib/services/career.service'
 import { totalEarnings } from '@/lib/services/commission.service'
 import { ensureCareerRewardAccrual } from '@/lib/services/career-reward.service'
+import { getDemoMarketScenarios } from '@/lib/network/demo-market-scenario'
+import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 
 /**
  * Assembles the network explorer from the signed-in member and the persisted
@@ -27,6 +29,7 @@ export async function getNetworkData() {
   if (!profile) throw new Error('Üyelik profili bulunamadı.')
 
   const rootId = profile.userId
+  const demoSimulationEnabled = process.env.VELOX_DEMO_SIMULATION !== 'false'
   const closureRows = await db
     .select({ descendantUserId: networkClosure.descendantUserId, depth: networkClosure.depth })
     .from(networkClosure)
@@ -56,7 +59,7 @@ export async function getNetworkData() {
     return current?.userId ?? userId
   }
 
-  const members = rows.map((row) => ({
+  const persistedMembers = rows.map((row) => ({
     id: row.userId,
     name: row.name,
     veloxId: row.veloxId,
@@ -71,10 +74,19 @@ export async function getNetworkData() {
     personalVolume: safeNumber(row.personalVolume),
     joinedAt: row.createdAt.toISOString(),
   }))
-  const currentCareer = profile.career
+  const simulation = demoSimulationEnabled
+    ? buildDemoGrowthSimulation({ userId: profile.userId, name: profile.name, veloxId: profile.veloxId, career: profile.career })
+    : null
+  // Once the admin creates the phase-1 test dataset, use those persisted
+  // DEMO rows so the investor and admin views inspect the same test data.
+  const hasPersistedDemo = persistedMembers.some((item) => item.id.startsWith('demo-sim-'))
+  const members = hasPersistedDemo ? persistedMembers : simulation?.members ?? persistedMembers
+  const currentCareer = (hasPersistedDemo || simulation) ? simulation?.simulation.projectedCareer ?? profile.career : profile.career
 
   const [careers, commissionLevels] = await Promise.all([loadCareers(), loadCommissionLevels()])
-  const unlockedDepth = unlockedDepthFor(careers, currentCareer)
+  // The simulated view is a training dataset and exposes all configured
+  // depths for review. It never changes the member's persisted career.
+  const unlockedDepth = (hasPersistedDemo || simulation) ? 33 : unlockedDepthFor(careers, currentCareer)
 
   const summary = networkSummary(members, rootId, currentCareer)
   const tree = buildSponsorTree(members, rootId)
@@ -109,6 +121,8 @@ export async function getNetworkData() {
     totalEarnings: totalEarnings(earnings),
     careerProgress,
     unlockedDepth,
+    marketScenarios: getDemoMarketScenarios(),
+    simulation: simulation?.simulation ?? null,
   }
 }
 

@@ -212,3 +212,25 @@ export const careerRewardAccrual = pgTable(
     index('career_reward_accrual_user_created_idx').on(table.userId, table.createdAt),
   ],
 )
+
+// Separate immutable-looking test ledger for the phase-1 simulator. This is
+// intentionally not used by wallet, payment, auth or production operations.
+export const demoLedgerEntry = pgTable(
+  'demo_ledger_entry',
+  {
+    id: serial('id').primaryKey(),
+    runKey: text('run_key').notNull(),
+    userId: text('user_id').notNull(),
+    userName: text('user_name').notNull(),
+    veloxId: text('velox_id').notNull(),
+    entryType: text('entry_type').notNull(),
+    amount: numeric('amount').notNull(),
+    status: text('status').notNull().default('demo_recorded'),
+    reference: text('reference').notNull(),
+    occurredAt: timestamp('occurred_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('demo_ledger_entry_run_idx').on(table.runKey, table.occurredAt),
+    index('demo_ledger_entry_user_idx').on(table.userId, table.occurredAt),
+  ],
+)
