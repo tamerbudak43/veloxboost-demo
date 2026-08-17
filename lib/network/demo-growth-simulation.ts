@@ -87,8 +87,9 @@ function careerFor(totalNetwork: number, teamInvestment: number) {
 }
 
 function categoryFor(index: number): DemoRegistrantType {
-  // Exact, stable long-run mix: 16% investors, 3% leaders, remainder starters.
-  const bucket = index % 100
+  // Spread the mix across registration order instead of putting all early
+  // entries into the investor bucket. Long-run ratio stays 16% / 3% / 81%.
+  const bucket = (index * 37 + 17) % 100
   if (bucket < 16) return 'investor'
   if (bucket < 19) return 'leader'
   return 'starter'
