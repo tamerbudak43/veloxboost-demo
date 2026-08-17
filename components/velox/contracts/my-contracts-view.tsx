@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { BadgeCheck, ClipboardList, FileText, Landmark, PenLine, ShieldCheck, Stamp, UserRound } from 'lucide-react'
+import { BadgeCheck, ClipboardList, Download, FileText, Landmark, PenLine, ShieldCheck, Stamp, UserRound } from 'lucide-react'
 import { Panel, StatusPill } from '@/components/velox/primitives'
 
 type DemoContract = {
@@ -56,6 +56,10 @@ export function MyContractsView({ memberName, memberEmail, veloxId }: { memberNa
         ))}
       </div>
 
+      <div className="flex justify-end">
+        <a href="/api/contracts/demo" className="inline-flex items-center gap-2 rounded-md border border-cyan/40 px-3.5 py-2 text-sm font-medium text-cyan transition-colors hover:bg-cyan/10"><Download className="size-4" /> Demo PDF indir</a>
+      </div>
+
       <Panel className="overflow-hidden">
         <div className="border-b border-border bg-surface/50 px-5 py-5 sm:px-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -87,7 +91,7 @@ export function MyContractsView({ memberName, memberEmail, veloxId }: { memberNa
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-foreground">Demo onay kaydı</p>
-                <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">Bu alan, tasarımda kaşe ve elektronik onay yerleşimini göstermek içindir. Gerçek elektronik imza, yetkilendirme veya hukuki onay niteliği taşımaz.</p>
+                <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">Bu alan, tasarımda kaşe ve elektronik onay yerleşimini göstermek içindir. Aynı görünüm, “Demo PDF indir” bağlantısındaki kişiye özel PDF çıktısında da yer alır. Gerçek elektronik imza, yetkilendirme veya hukuki onay niteliği taşımaz.</p>
               </div>
               <div className="flex items-end gap-5 self-end sm:self-auto">
                 <div className="flex size-[72px] rotate-[-8deg] flex-col items-center justify-center rounded-full border-2 border-dashed border-cyan/70 text-center text-[9px] font-bold leading-3 tracking-[0.12em] text-cyan">

@@ -10,6 +10,7 @@ const nextConfig = {
   // while producing a PDF. Include those files in its Vercel server bundle.
   outputFileTracingIncludes: {
     '/api/receipts/\\[receiptNumber\\]': ['./public/assets/**/*'],
+    '/api/contracts/demo': ['./public/assets/**/*'],
   },
   // Keep react-pdf in the Node.js server bundle; it relies on Node runtime
   // APIs when rendering a PDF buffer.
