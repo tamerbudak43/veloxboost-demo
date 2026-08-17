@@ -1,13 +1,14 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { and, asc, count, desc, eq, ilike, like, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { career, careerRequirement, commissionLevel, demoLedgerEntry, investmentReceipt, member, networkClosure, withdrawal } from '@/lib/db/schema'
+import { account, career, careerRequirement, careerRewardAccrual, commissionLevel, demoLedgerEntry, investmentReceipt, member, networkClosure, session, user as authUser, verification, withdrawal } from '@/lib/db/schema'
 import { getSessionMember, requireAdmin } from '@/lib/admin-auth'
 import { safeNumber } from '@/lib/format'
 import { demoCommissionPlan } from '@/lib/network/demo-commission-plan'
 import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
+import { DEMO_DAILY_DISTRIBUTION_AVERAGE } from '@/lib/network/demo-market-scenario'
 
 /** Lightweight check used by the admin login form after sign-in. */
 export async function checkAdminAccess(): Promise<boolean> {
@@ -101,6 +102,49 @@ const DEMO_PREFIX = 'demo-sim-'
 const DEMO_RUN_KEY = 'phase-1-growth-v1'
 
 /**
+ * Irreversible phase-1 reset. It retains only the currently signed-in admin
+ * identity and baseline career/commission configuration. The confirmation is
+ * intentionally checked server-side; no client input can bypass it.
+ */
+export async function resetPhaseOneDemoBaseline(confirmation: string) {
+  const admin = await requireAdmin()
+  if (confirmation.trim().toUpperCase() !== 'SIFIRLA') {
+    throw new Error('Sıfırlama için SIFIRLA onayı gerekli.')
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.delete(demoLedgerEntry)
+    await tx.delete(withdrawal)
+    await tx.delete(investmentReceipt)
+    await tx.delete(careerRewardAccrual)
+    await tx.delete(networkClosure)
+    await tx.delete(member).where(ne(member.userId, admin.userId))
+    await tx.delete(account).where(ne(account.userId, admin.userId))
+    await tx.delete(session).where(ne(session.userId, admin.userId))
+    await tx.delete(authUser).where(ne(authUser.id, admin.userId))
+    await tx.delete(verification)
+    await tx.update(member).set({
+      sponsorId: null,
+      status: 'active',
+      career: 'STARTER',
+      personalVolume: '0',
+      teamVolume: '0',
+      leftVolume: '0',
+      rightVolume: '0',
+      balance: '0',
+      directCount: 0,
+    }).where(eq(member.userId, admin.userId))
+  })
+
+  revalidatePath('/partners')
+  revalidatePath('/admin')
+  revalidatePath('/admin/users')
+  revalidatePath('/admin/network')
+  revalidatePath('/admin/demo-simulation')
+  return { ok: true, retainedAdmin: admin.name }
+}
+
+/**
  * Creates a reproducible phase-1 dataset for the signed-in administrator.
  * No auth account, wallet record, payment instruction or blockchain request
  * is created for any synthetic member. Every generated row is marked DEMO.
@@ -168,7 +212,7 @@ export async function seedPhaseOneDemoSimulation() {
     })))
 
     const ledgerRows = demoMembers.flatMap((item) => {
-      const accrual = Number((item.personalInvestment * 0.019).toFixed(2))
+      const accrual = Number((item.personalInvestment * (DEMO_DAILY_DISTRIBUTION_AVERAGE / 100)).toFixed(2))
       const rows = [
         { runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_investment', amount: String(item.personalInvestment), status: 'confirmed_demo', reference: `DEMO-${item.veloxId}-INV`, occurredAt: new Date(item.joinedAt) },
         { runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-ACC`, occurredAt: now },

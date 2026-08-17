@@ -11,6 +11,13 @@ export type DemoMarketScenario = {
   active: boolean
 }
 
+// Fixed for the phase-1 test run. This is presentation-only test data and is
+// never credited to a wallet or transmitted as a payment instruction.
+export const DEMO_DAILY_SYSTEM_RATE = 2.6
+export const DEMO_DAILY_DISTRIBUTION_AVERAGE = 1.7
+export const DEMO_DAILY_DISTRIBUTION_MIN = 1.4
+export const DEMO_DAILY_DISTRIBUTION_MAX = 2.2
+
 const TIME_ZONE = 'Europe/Istanbul'
 
 function parts(date: Date) {
@@ -22,25 +29,21 @@ function parts(date: Date) {
   return { day: `${get('year')}-${get('month')}-${get('day')}`, hour: Number(get('hour')) }
 }
 
-function stableUnit(key: string) {
-  let hash = 2166136261
-  for (const char of key) {
-    hash ^= char.charCodeAt(0)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0) / 4294967295
-}
-
-function rateFor(day: string, slot: number) {
-  return Math.round((1.4 + stableUnit(`${day}:velox-demo:${slot}`) * 0.7) * 100) / 100
+function dayRotation(day: string) {
+  let total = 0
+  for (const character of day) total += character.charCodeAt(0)
+  return total % 8
 }
 
 export function getDemoMarketScenarios(now = new Date()): DemoMarketScenario[] {
   const { day, hour } = parts(now)
   const activeSlot = Math.min(7, Math.floor(hour / 3))
+  // Sum = 13.6, so each calendar day's eight slots average exactly 1.70%.
+  const rates = [1.4, 1.5, 1.6, 1.7, 2.2, 1.9, 1.8, 1.5]
+  const rotation = dayRotation(day)
   return Array.from({ length: 8 }, (_, slot) => {
     const start = String(slot * 3).padStart(2, '0')
     const end = String(slot === 7 ? 24 : (slot + 1) * 3).padStart(2, '0')
-    return { slot, label: `${start}:00–${end}:00`, rate: rateFor(day, slot), active: slot === activeSlot }
+    return { slot, label: `${start}:00–${end}:00`, rate: rates[(slot + rotation) % rates.length], active: slot === activeSlot }
   })
 }
