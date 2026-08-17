@@ -61,6 +61,7 @@ export interface DepthRow {
   active: number
   qualified: number
   volume: number
+  investment: number
   commissionRate: number
   unlocked: boolean
 }

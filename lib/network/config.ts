@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { career, careerRequirement, commissionLevel } from '@/lib/db/schema'
 import { safeNumber } from '@/lib/format'
 import type { CareerDef } from './types'
+import { demoCommissionPlan } from './demo-commission-plan'
 
 /** Loads the full career ladder with requirements, ordered by rank. */
 export async function loadCareers(): Promise<CareerDef[]> {
@@ -46,6 +47,10 @@ export interface CommissionLevelDef {
 /** Loads all 33 commission levels ordered by level. */
 export async function loadCommissionLevels(): Promise<CommissionLevelDef[]> {
   const rows = await db.select().from(commissionLevel).orderBy(asc(commissionLevel.level))
+  // A fresh demo database starts with placeholder zero rows. Until the admin
+  // explicitly configures a different plan, use the agreed demo distribution.
+  const hasConfiguredPlan = rows.some((r) => r.enabled || safeNumber(r.percentage) > 0)
+  if (!hasConfiguredPlan) return demoCommissionPlan
   return rows.map((r) => ({
     level: r.level,
     percentage: safeNumber(r.percentage),

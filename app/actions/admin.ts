@@ -6,6 +6,7 @@ import { db } from '@/lib/db'
 import { career, careerRequirement, commissionLevel, member, withdrawal } from '@/lib/db/schema'
 import { getSessionMember, requireAdmin } from '@/lib/admin-auth'
 import { safeNumber } from '@/lib/format'
+import { demoCommissionPlan } from '@/lib/network/demo-commission-plan'
 
 /** Lightweight check used by the admin login form after sign-in. */
 export async function checkAdminAccess(): Promise<boolean> {
@@ -13,8 +14,7 @@ export async function checkAdminAccess(): Promise<boolean> {
   return me?.role === 'admin'
 }
 
-/** Creates only non-financial initial configuration for a fresh database.
- * Rates and thresholds are deliberately zero until an administrator sets them. */
+/** Creates the default demo configuration for a fresh database. */
 async function ensureInitialAdminConfig() {
   const existing = await db.select({ total: count() }).from(career)
   if ((existing[0]?.total ?? 0) === 0) {
@@ -30,14 +30,12 @@ async function ensureInitialAdminConfig() {
   }
   const commissionCount = await db.select({ total: count() }).from(commissionLevel)
   if ((commissionCount[0]?.total ?? 0) === 0) {
-    await db.insert(commissionLevel).values(
-      Array.from({ length: 33 }, (_, index) => ({
-        level: index + 1,
-        percentage: '0',
-        requiredCareerCode: 'STARTER',
-        enabled: false,
-      })),
-    )
+    await db.insert(commissionLevel).values(demoCommissionPlan.map((item) => ({
+      level: item.level,
+      percentage: String(item.percentage),
+      requiredCareerCode: item.requiredCareerCode,
+      enabled: item.enabled,
+    })))
   }
 }
 
