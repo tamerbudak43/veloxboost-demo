@@ -3,8 +3,8 @@
 import { getMyProfile } from '@/app/actions/member'
 import { loadCareers, loadCommissionLevels, unlockedDepthFor } from '@/lib/network/config'
 import { db } from '@/lib/db'
-import { member, networkClosure } from '@/lib/db/schema'
-import { desc, eq, inArray } from 'drizzle-orm'
+import { investmentReceipt, member, networkClosure } from '@/lib/db/schema'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { safeNumber } from '@/lib/format'
 import {
   buildDepthRows,
@@ -34,8 +34,16 @@ export async function getNetworkData() {
 
   const depthByUserId = new Map(closureRows.map((row) => [row.descendantUserId, row.depth]))
   const userIds = [rootId, ...closureRows.map((row) => row.descendantUserId)]
-  const rows = await db.select().from(member).where(inArray(member.userId, userIds))
+  const [rows, investmentRows] = await Promise.all([
+    db.select().from(member).where(inArray(member.userId, userIds)),
+    db
+      .select({ userId: investmentReceipt.userId, total: sql<string>`coalesce(sum(${investmentReceipt.amount}), 0)` })
+      .from(investmentReceipt)
+      .where(and(inArray(investmentReceipt.userId, userIds), eq(investmentReceipt.status, 'confirmed')))
+      .groupBy(investmentReceipt.userId),
+  ])
   const byUserId = new Map(rows.map((row) => [row.userId, row]))
+  const investmentByUserId = new Map(investmentRows.map((row) => [row.userId, safeNumber(row.total)]))
 
   // Resolve each member's direct top-level branch under the signed-in user.
   const legRootFor = (userId: string) => {
@@ -57,9 +65,9 @@ export async function getNetworkData() {
     legRootId: row.userId === rootId ? rootId : legRootFor(row.userId),
     status: row.status === 'qualified' ? 'qualified' as const : row.status === 'inactive' ? 'inactive' as const : 'active' as const,
     career: row.career,
-    // Investment balances are not inferred from member.balance. They will be
-    // populated by the ledger/contract phase.
-    personalInvestment: 0,
+    // Only confirmed demo receipts are included. Pending instructions are not
+    // treated as investment or payment records.
+    personalInvestment: investmentByUserId.get(row.userId) ?? 0,
     personalVolume: safeNumber(row.personalVolume),
     joinedAt: row.createdAt.toISOString(),
   }))

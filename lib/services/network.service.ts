@@ -125,6 +125,7 @@ export interface NetworkListRow {
   level: number
   status: NetworkMember['status']
   career: string
+  personalInvestment: number
   personalVolume: number
   teamVolume: number
   joinedAt: string
@@ -145,6 +146,7 @@ export function buildMemberList(members: NetworkMember[], rootId: string): Netwo
       level: m.depth - rootDepth,
       status: m.status,
       career: m.career,
+      personalInvestment: safeNumber(m.personalInvestment),
       personalVolume: safeNumber(m.personalVolume),
       teamVolume: sumPersonalVolume(descendantsOf(list, m.id, kids)),
       joinedAt: m.joinedAt,
