@@ -15,26 +15,24 @@ export const auth = betterAuth({
     autoSignIn: true,
   },
   trustedOrigins: [
+    'https://veloxboost.online',
+    'https://www.veloxboost.online',
     ...(process.env.V0_RUNTIME_URL ? [process.env.V0_RUNTIME_URL] : []),
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
     ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
       : []),
-    // Local dev / v0 preview. The preview iframe is served from a rotating
-    // *.vercel.run sandbox origin, so trust that wildcard in development.
     ...(process.env.NODE_ENV === 'development'
       ? ['http://localhost:3000', 'https://localhost:3000', 'https://*.vercel.run']
       : []),
   ],
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
   },
   ...(process.env.NODE_ENV === 'development'
     ? {
         advanced: {
-          // In dev (v0 preview iframe), force cross-site cookies so the
-          // session cookie is stored by the browser.
           defaultCookieAttributes: {
             sameSite: 'none' as const,
             secure: true,
