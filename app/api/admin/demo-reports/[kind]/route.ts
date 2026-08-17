@@ -1,0 +1,22 @@
+import { headers } from 'next/headers'
+import { NextResponse } from 'next/server'
+import { eq } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { member } from '@/lib/db/schema'
+import { loadDemoReports } from '@/lib/services/demo-report.service'
+import { renderDemoDayEndReport, renderDemoGrowthReport } from '@/lib/pdf/demo-day-end-report'
+
+export const runtime = 'nodejs'
+
+export async function GET(_request: Request, { params }: { params: Promise<{ kind: string }> }) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) return new NextResponse('Oturum gerekli.', { status: 401 })
+  const [profile] = await db.select({ role: member.role }).from(member).where(eq(member.userId, session.user.id)).limit(1)
+  if (profile?.role !== 'admin') return new NextResponse('Yönetici yetkisi gerekli.', { status: 403 })
+  const { kind } = await params
+  const data = await loadDemoReports()
+  const pdf = kind === 'growth' ? await renderDemoGrowthReport(data) : kind === 'finance' ? await renderDemoDayEndReport(data) : null
+  if (!pdf) return new NextResponse('Rapor türü bulunamadı.', { status: 404 })
+  return new NextResponse(pdf, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="VELOX_DEMO_${kind === 'growth' ? 'AG_BUYUME' : 'GUN_SONU'}_RAPORU.pdf"`, 'Cache-Control': 'private, no-store' } })
+}

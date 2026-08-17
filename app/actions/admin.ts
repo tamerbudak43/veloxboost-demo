@@ -287,6 +287,7 @@ export async function resetPhaseOneDemoBaseline(confirmation: string) {
   revalidatePath('/admin/users')
   revalidatePath('/admin/network')
   revalidatePath('/admin/demo-simulation')
+  revalidatePath('/admin/reports')
   return { ok: true, retainedAdmin: admin.name }
 }
 
@@ -343,7 +344,6 @@ export async function seedPhaseOneDemoSimulation() {
     }
     if (closureRows.length) await tx.insert(networkClosure).values(closureRows)
 
-    const now = new Date()
     await tx.insert(investmentReceipt).values(demoMembers.map((item) => ({
       userId: item.id,
       receiptNumber: `DEMO-${item.veloxId}`,
@@ -357,15 +357,25 @@ export async function seedPhaseOneDemoSimulation() {
       confirmedAt: new Date(item.joinedAt),
     })))
 
-    const ledgerRows = demoMembers.flatMap((item) => {
-      const accrual = Number((item.personalInvestment * (DEMO_DAILY_DISTRIBUTION_AVERAGE / 100)).toFixed(2))
-      const rows = [
-        { runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_investment', amount: String(item.personalInvestment), status: 'confirmed_demo', reference: `DEMO-${item.veloxId}-INV`, occurredAt: new Date(item.joinedAt) },
-        { runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-ACC`, occurredAt: now },
-      ]
-      if (accrual >= 25) rows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_auto_withdrawal', amount: String(-accrual), status: 'auto_withdrawn_demo', reference: `DEMO-${item.veloxId}-WDL`, occurredAt: now })
-      return rows
-    })
+    const ledgerRows = demoMembers.map((item) => ({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_investment', amount: String(item.personalInvestment), status: 'confirmed_demo', reference: `DEMO-${item.veloxId}-INV`, occurredAt: new Date(item.joinedAt) }))
+    // One deterministic daily financial snapshot per simulated day. These are
+    // report-only ledger rows and are never handed to wallet or payment code.
+    const now = new Date()
+    for (let day = 1; day <= simulation.currentDay; day++) {
+      const occurredAt = new Date(now.getTime() - (simulation.currentDay - day) * 86_400_000)
+      const active = demoMembers.filter((item) => new Date(item.joinedAt).getTime() <= occurredAt.getTime())
+      const activeCapital = active.reduce((total, item) => total + item.personalInvestment, 0)
+      const gross = Number((activeCapital * 0.026).toFixed(2))
+      ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: admin.userId, userName: admin.name, veloxId: admin.veloxId, entryType: 'demo_arbitrage_income', amount: String(gross), status: 'scenario_income', reference: `DEMO-D${day}-ARB`, occurredAt })
+      for (const item of active) {
+        const accrual = Number((item.personalInvestment * (DEMO_DAILY_DISTRIBUTION_AVERAGE / 100)).toFixed(2))
+        const referral = Number((accrual * 0.06).toFixed(2))
+        ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-ACC`, occurredAt })
+        if (referral > 0) ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.sponsorId ?? admin.userId, userName: byId.get(item.sponsorId ?? admin.userId)?.name ?? admin.name, veloxId: byId.get(item.sponsorId ?? admin.userId)?.veloxId ?? admin.veloxId, entryType: 'demo_referral_commission', amount: String(referral), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-REF`, occurredAt })
+        const payout = Number((accrual + referral).toFixed(2))
+        if (payout >= 25) ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_auto_withdrawal', amount: String(-payout), status: 'auto_withdrawn_demo', reference: `DEMO-${item.veloxId}-D${day}-WDL`, occurredAt })
+      }
+    }
     await tx.insert(demoLedgerEntry).values(ledgerRows)
   })
 
@@ -373,6 +383,7 @@ export async function seedPhaseOneDemoSimulation() {
   revalidatePath('/admin')
   revalidatePath('/admin/network')
   revalidatePath('/admin/demo-simulation')
+  revalidatePath('/admin/reports')
   return { created: demoMembers.length, day: simulation.currentDay }
 }
 
