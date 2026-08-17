@@ -68,8 +68,9 @@ function NodeCard({
 /** Recursive org-chart node: card on top, connector lines, children row below. */
 function TreeNode({ nodes, index, depth = 0, placement }: { nodes: SponsorTreeNode[]; index: number; depth?: number; placement?: 'Sol' | 'Sağ' }) {
   const node = nodes[index]
-  // Root + two matrix rows are open on first view: 1 → 2 → 4.
-  const [open, setOpen] = useState(depth < 2)
+  // First four matrix rows are open on first view: 1 → 2 → 4 → 8.
+  // This keeps node 14/15 visible while deeper levels remain collapsible.
+  const [open, setOpen] = useState(depth < 3)
   const children = [nodes[index * 2 + 1], nodes[index * 2 + 2]].filter(Boolean) as SponsorTreeNode[]
   const hasChildren = children.length > 0
   const showChildren = hasChildren && open
