@@ -66,10 +66,12 @@ function NodeCard({
 }
 
 /** Recursive org-chart node: card on top, connector lines, children row below. */
-function TreeNode({ node, depth = 0, placement }: { node: SponsorTreeNode; depth?: number; placement?: 'Sol' | 'Sağ' }) {
+function TreeNode({ nodes, index, depth = 0, placement }: { nodes: SponsorTreeNode[]; index: number; depth?: number; placement?: 'Sol' | 'Sağ' }) {
+  const node = nodes[index]
   // Root + two matrix rows are open on first view: 1 → 2 → 4.
   const [open, setOpen] = useState(depth < 2)
-  const hasChildren = node.children.length > 0
+  const children = [nodes[index * 2 + 1], nodes[index * 2 + 2]].filter(Boolean) as SponsorTreeNode[]
+  const hasChildren = children.length > 0
   const showChildren = hasChildren && open
 
   return (
@@ -83,7 +85,7 @@ function TreeNode({ node, depth = 0, placement }: { node: SponsorTreeNode; depth
 
           {/* children row with connector bars */}
           <div className="flex items-start">
-            {node.children.map((child, i) => {
+            {children.map((child, i) => {
               const isFirst = i === 0
               const isLast = i === node.children.length - 1
               const isOnly = node.children.length === 1
@@ -101,7 +103,7 @@ function TreeNode({ node, depth = 0, placement }: { node: SponsorTreeNode; depth
                       <div className="absolute left-1/2 top-0 h-px w-1/2 bg-border" />
                     )}
                   </div>
-                  <TreeNode node={child} depth={depth + 1} placement={i === 0 ? 'Sol' : 'Sağ'} />
+                  <TreeNode nodes={nodes} index={index * 2 + i + 1} depth={depth + 1} placement={i === 0 ? 'Sol' : 'Sağ'} />
                 </div>
               )
             })}
@@ -121,10 +123,22 @@ export function SponsorTree({ root }: { root: SponsorTreeNode | null }) {
     )
   }
 
+  // Existing sponsor data can have more than two direct records. For the
+  // matrix visual it is read breadth-first and placed into fixed binary slots
+  // (1 → 2 → 4 → 8). New demo records are also written with this same rule.
+  const nodes: SponsorTreeNode[] = []
+  const queue = [root]
+  while (queue.length) {
+    const current = queue.shift()
+    if (!current) continue
+    nodes.push(current)
+    queue.push(...current.children)
+  }
+
   return (
     <div className="overflow-x-auto p-3">
       <div className="flex min-w-max justify-center">
-        <TreeNode node={root} />
+        <TreeNode nodes={nodes} index={0} />
       </div>
     </div>
   )

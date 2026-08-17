@@ -137,11 +137,10 @@ export function buildDemoGrowthSimulation(root: {
         : type === 'leader'
           ? 750 + Math.round(random() * 450)
           : 100 + Math.round(random() * 900)
-      const parentIndex = members.length === 1
-        ? 0
-        // New registrations appear under earlier registrations only. The
-        // first few are direct referrals, later ones spread into the network.
-        : (serial <= 10 ? 0 : Math.floor(random() * Math.max(1, members.length - 1)) + 1)
+      // Strict binary matrix placement: A has B/C, then D/E/F/G, then eight
+      // places. The parent index follows the binary-heap rule so no member
+      // can ever receive more than two matrix children.
+      const parentIndex = Math.floor((serial - 1) / 2)
       const sponsor = members[parentIndex] ?? members[0]
       const depth = Math.min(33, sponsor.depth + 1)
       const id = `demo-sim-${day}-${serial}`
