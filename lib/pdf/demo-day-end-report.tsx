@@ -1,13 +1,38 @@
-import { Document, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer'
+import { Document, Font, Image, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer'
+import path from 'node:path'
 import type { DemoDailyReport, DemoPaymentDetail } from '@/lib/services/demo-report.service'
 
-const s = StyleSheet.create({ page: { padding: 34, fontSize: 8, color: '#10243a' }, title: { fontSize: 18, fontWeight: 700, color: '#007fa5' }, sub: { marginTop: 5, color: '#526579' }, note: { marginTop: 10, padding: 8, backgroundColor: '#fff6df', color: '#6a5115' }, h: { marginTop: 16, padding: 7, backgroundColor: '#eaf7fb', fontSize: 10, fontWeight: 700 }, row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#dce6ec', paddingVertical: 5 }, cell: { width: '11%', fontSize: 7 }, wide: { width: '23%', fontSize: 7 }, amount: { width: '11%', fontSize: 7, textAlign: 'right' }, footer: { position: 'absolute', bottom: 24, left: 34, right: 34, fontSize: 7, color: '#526579' } })
+const pdfAssets = path.join(process.cwd(), 'public', 'assets')
+
+// React-PDF'nin varsayılan Helvetica yazı tipi Türkçe karakterleri tam kapsamaz.
+// DejaVu Sans proje içinde paketlendiği için Vercel üretiminde de aynı karakterler görünür.
+Font.register({ family: 'VeloxDocument', src: path.join(pdfAssets, 'velox-document-regular.ttf'), fontWeight: 400 })
+Font.register({ family: 'VeloxDocument', src: path.join(pdfAssets, 'velox-document-bold.ttf'), fontWeight: 700 })
+
+const s = StyleSheet.create({
+  page: { padding: 34, fontFamily: 'VeloxDocument', fontSize: 8, color: '#10243a' },
+  brand: { position: 'absolute', top: 20, right: 34, flexDirection: 'row', alignItems: 'center' },
+  brandLogo: { width: 22, height: 34, objectFit: 'contain' },
+  brandWord: { marginLeft: 5, fontFamily: 'VeloxDocument', fontSize: 10, fontWeight: 700, letterSpacing: 2, color: '#005e8d' },
+  brandTag: { marginLeft: 5, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3, backgroundColor: '#eaf7fb', color: '#007fa5', fontSize: 5.5, fontWeight: 700 },
+  title: { fontFamily: 'VeloxDocument', fontSize: 18, fontWeight: 700, color: '#007fa5' },
+  sub: { marginTop: 5, color: '#526579' },
+  note: { marginTop: 10, padding: 8, backgroundColor: '#fff6df', color: '#6a5115' },
+  h: { marginTop: 16, padding: 7, backgroundColor: '#eaf7fb', fontSize: 10, fontWeight: 700 },
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#dce6ec', paddingVertical: 5 },
+  cell: { width: '11%', fontSize: 7 },
+  wide: { width: '23%', fontSize: 7 },
+  amount: { width: '11%', fontSize: 7, textAlign: 'right' },
+  footer: { position: 'absolute', bottom: 24, left: 34, right: 34, fontSize: 7, color: '#526579' },
+})
 const n = (value: number) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
 const Row = ({ values }: { values: string[] }) => <View style={s.row}>{values.map((value, index) => <Text key={`${value}-${index}`} style={[s.cell, { width: `${100 / values.length}%`, textAlign: index === 0 ? 'left' : 'right' }]}>{value}</Text>)}</View>
+const PdfBrand = () => <View style={s.brand} fixed><Image src={path.join(pdfAssets, 'velox-logo-header-print.png')} style={s.brandLogo} /><Text style={s.brandWord}>VELOX</Text><Text style={s.brandTag}>DEMO</Text></View>
 
 export async function renderDemoDayEndReport(data: { daily: DemoDailyReport[]; payments: DemoPaymentDetail[]; endingCash: number }) {
   const current = data.daily.at(-1)
   return renderToBuffer(<Document title="VELOX Demo Gün Sonu Raporu" author="VELOX Demo"><Page size="A4" style={s.page}>
+    <PdfBrand />
     <Text style={s.title}>DEMO GÜN SONU FİNANS RAPORU</Text><Text style={s.sub}>Senaryo verisi - gerçek ödeme, cüzdan ya da yatırım kaydı değildir.</Text>
     <Text style={s.note}>Arbitraj brüt getirisi %2,6 senaryo oranıdır. Referans bonusu, yeni doğrudan referansın ilk yatırımının bir defalık %6'sıdır. Network geliri, admin komisyon planındaki aktif seviye oranlarından hesaplanır.</Text>
     <Text style={s.h}>GÜNLÜK FİNANS TABLOSU</Text><Row values={['Tarih', 'Giriş', 'Arb.', 'Yatırım', 'Ref. %6', 'Network', 'Dağıtım', 'Ödeme', 'K/Z', 'Kasa']} />
@@ -22,6 +47,7 @@ export async function renderDemoDayEndReport(data: { daily: DemoDailyReport[]; p
 
 export async function renderDemoGrowthReport(data: { daily: DemoDailyReport[] }) {
   return renderToBuffer(<Document title="VELOX Demo Ağ Büyüme Raporu" author="VELOX Demo"><Page size="A4" style={s.page}>
+    <PdfBrand />
     <Text style={s.title}>DEMO AĞ BÜYÜME RAPORU</Text><Text style={s.sub}>Günlük kayıt hızı, kümülatif ağ ve kritik eşik görünümü.</Text><Text style={s.note}>Bu rapor sentetik kayıtlar üzerinden oluşturulur; gerçek üye veya gelir performansı anlamına gelmez.</Text>
     <Text style={s.h}>GÜNLÜK BÜYÜME TABLOSU</Text><Row values={['Tarih', 'Yeni kayıt', 'Toplam ağ', 'Günlük giriş', 'Önceki gün', 'Büyüme %', 'Kritik eşik', 'Kasa']} />
     {data.daily.map((row, index) => { const prev = data.daily[index - 1]?.cumulativeMembers ?? 0; const growth = prev ? ((row.cumulativeMembers - prev) / prev) * 100 : 0; const threshold = row.cumulativeMembers >= 50 ? '50+ ağ' : row.cumulativeMembers >= 25 ? '25+ ağ' : row.cumulativeMembers >= 10 ? '10+ ağ' : 'Başlangıç'; return <Row key={row.date} values={[row.date, String(row.registrations), String(row.cumulativeMembers), n(row.deposits), String(prev), `%${n(growth)}`, threshold, n(row.closingCash)]} /> })}
