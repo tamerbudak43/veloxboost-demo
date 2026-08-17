@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { and, asc, count, desc, eq, ilike, like, ne, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, ilike, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { account, career, careerRequirement, careerRewardAccrual, commissionLevel, demoLedgerEntry, investmentReceipt, member, networkClosure, session, user as authUser, verification, withdrawal } from '@/lib/db/schema'
 import { getSessionMember, requireAdmin } from '@/lib/admin-auth'
@@ -21,14 +21,49 @@ async function ensureInitialAdminConfig() {
   const existing = await db.select({ total: count() }).from(career)
   if ((existing[0]?.total ?? 0) === 0) {
     const created = await db.insert(career).values([
-      { code: 'STARTER', name: 'Starter', displayOrder: 1, unlockedDepth: 3 },
-      { code: 'BRONZE', name: 'Bronze', displayOrder: 2, unlockedDepth: 6 },
-      { code: 'SILVER', name: 'Silver', displayOrder: 3, unlockedDepth: 10 },
-      { code: 'GOLD', name: 'Gold', displayOrder: 4, unlockedDepth: 14 },
-      { code: 'PLATINUM', name: 'Platinum', displayOrder: 5, unlockedDepth: 20 },
-      { code: 'DIAMOND', name: 'Diamond', displayOrder: 6, unlockedDepth: 33 },
+      { code: 'STARTER', name: 'Starter', displayOrder: 1, unlockedDepth: 3, dailyWithdrawalLimit: '500', careerReward: '0' },
+      { code: 'BRONZE', name: 'Bronze', displayOrder: 2, unlockedDepth: 5, dailyWithdrawalLimit: '1000', careerReward: '100' },
+      { code: 'SILVER', name: 'Silver', displayOrder: 3, unlockedDepth: 8, dailyWithdrawalLimit: '2500', careerReward: '300' },
+      { code: 'GOLD', name: 'Gold', displayOrder: 4, unlockedDepth: 10, dailyWithdrawalLimit: '5000', careerReward: '1000' },
+      { code: 'PLATINUM', name: 'Platinum', displayOrder: 5, unlockedDepth: 15, dailyWithdrawalLimit: '10000', careerReward: '3000' },
+      { code: 'DIAMOND', name: 'Diamond', displayOrder: 6, unlockedDepth: 20, dailyWithdrawalLimit: '25000', careerReward: '9000' },
+      { code: 'BLUE_DIAMOND', name: 'Blue Diamond', displayOrder: 7, unlockedDepth: 25, dailyWithdrawalLimit: '50000', careerReward: '30000' },
+      { code: 'RED_DIAMOND', name: 'Red Diamond', displayOrder: 8, unlockedDepth: 28, dailyWithdrawalLimit: '75000', careerReward: '90000' },
+      { code: 'BLACK_DIAMOND', name: 'Black Diamond', displayOrder: 9, unlockedDepth: 30, dailyWithdrawalLimit: '100000', careerReward: '300000' },
+      { code: 'AMBASSADOR', name: 'Ambassador', displayOrder: 10, unlockedDepth: 33, dailyWithdrawalLimit: '250000', careerReward: '900000' },
+      { code: 'CROWN_AMBASSADOR', name: 'Crown Ambassador', displayOrder: 11, unlockedDepth: 33, dailyWithdrawalLimit: '1000000', careerReward: '2700000' },
     ]).returning({ id: career.id })
     await db.insert(careerRequirement).values(created.map((row) => ({ careerId: row.id })))
+  } else {
+    // Existing installations may already have the original ten-rank ladder.
+    // Insert RED DIAMOND once and preserve every admin-configured threshold
+    // on the surrounding careers.
+    const rows = await db.select({ id: career.id }).from(career).where(eq(career.code, 'RED_DIAMOND')).limit(1)
+    if (!rows[0]) {
+      await db.update(career).set({ displayOrder: sql`${career.displayOrder} + 1` }).where(gte(career.displayOrder, 8))
+      const [redDiamond] = await db.insert(career).values({
+        code: 'RED_DIAMOND',
+        name: 'Red Diamond',
+        displayOrder: 8,
+        unlockedDepth: 28,
+        dailyWithdrawalLimit: '75000',
+        careerReward: '90000',
+        enabled: true,
+      }).returning({ id: career.id })
+      if (!redDiamond) throw new Error('RED DIAMOND kariyeri oluşturulamadı.')
+      await db.insert(careerRequirement).values({
+        careerId: redDiamond.id,
+        requiredPersonalPartners: 18,
+        requiredActivePartners: 14,
+        requiredQualifiedPartners: 10,
+        requiredPersonalInvestment: '15000',
+        requiredPersonalVolume: '15000',
+        requiredDirectVolume: '120000',
+        requiredTeamVolume: '800000',
+        requiredStrongLegVolume: '480000',
+        requiredOtherLegVolume: '320000',
+      })
+    }
   }
   const commissionCount = await db.select({ total: count() }).from(commissionLevel)
   if ((commissionCount[0]?.total ?? 0) === 0) {
