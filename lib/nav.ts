@@ -58,7 +58,7 @@ export const navSections: NavSection[] = [
       { label: 'Rapor', href: '/reports', icon: BarChart3 },
       { label: 'Belgeler', href: '/documents', icon: FolderOpen },
       { label: 'Tüm Sözleşmeler', href: '/contracts', icon: ScrollText },
-      { label: 'Sözleşmelerim', href: '/my-contracts', icon: Files },
+      { label: 'Sözleşmelerim', href: '/contract-portfolio', icon: Files },
       { label: 'Yatırımcı İstatistiği', href: '/investor-statistics', icon: TrendingUp },
       { label: 'Pazarlama İstatistiği', href: '/marketing-statistics', icon: Megaphone },
       { label: 'Gelişim Planı', href: '/career', icon: Target },

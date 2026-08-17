@@ -110,6 +110,7 @@ export function buildDepthRows(
       active: atLevel.filter((m) => m.status === 'active' || m.status === 'qualified').length,
       qualified: atLevel.filter((m) => m.status === 'qualified').length,
       volume: sumPersonalVolume(atLevel),
+      investment: atLevel.reduce((total, member) => total + safeNumber(member.personalInvestment), 0),
       commissionRate: cfg?.enabled ? cfg.percentage : 0,
       unlocked: level <= unlockedDepth,
     })

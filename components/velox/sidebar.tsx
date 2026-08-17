@@ -20,7 +20,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   }
   const itemLabels: Record<string, string> = {
     '/arbitraj': t.arbitrage, '/arbitraj-pro': t.arbitragePro, '/arbitraj-havuzlari': t.pools, '/velox-trade': t.trade, '/liquidity': t.liquidity, '/pool-percentage': t.poolPercent,
-    '/reports': t.reports, '/documents': t.documents, '/contracts': t.allContracts, '/my-contracts': t.myContracts, '/investor-statistics': t.investorStats, '/marketing-statistics': t.marketingStats, '/career': t.career, '/products': t.products,
+    '/reports': t.reports, '/documents': t.documents, '/contracts': t.allContracts, '/my-contracts': t.contract, '/contract-portfolio': t.myContracts, '/investor-statistics': t.investorStats, '/marketing-statistics': t.marketingStats, '/career': t.career, '/products': t.products,
     '/partner-program': t.partnerProgram, '/partner-challenge': t.partnerChallenge, '/partner-boost': t.partnerBoost, '/partners': t.networkProgram, '/ranks': t.ranks,
     '/settings': t.accountSettings, '/faq': t.faq, '/help': t.help,
   }
