@@ -15,7 +15,6 @@ import {
 import { legSummaries } from '@/lib/services/volume.service'
 import { evaluateCareer, type CareerMetrics } from '@/lib/services/career.service'
 import { totalEarnings } from '@/lib/services/commission.service'
-import { ensureCareerRewardAccrual } from '@/lib/services/career-reward.service'
 import { getDemoMarketScenarios } from '@/lib/network/demo-market-scenario'
 import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 import { evaluateCashback } from '@/lib/services/cashback.service'
@@ -191,14 +190,11 @@ export async function getDirectReferralDashboardData() {
 /** Career progression payload for the /career page. */
 export async function getCareerData() {
   const data = await getNetworkData()
-  const profile = await getMyProfile()
-  const reward = profile ? await ensureCareerRewardAccrual(profile.userId, profile.career) : null
   const careers = await loadCareers()
   return {
     summary: data.summary,
     careerProgress: data.careerProgress,
     careers,
     unlockedDepth: data.unlockedDepth,
-    reward,
   }
 }

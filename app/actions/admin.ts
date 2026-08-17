@@ -158,7 +158,7 @@ async function ensureInitialAdminConfig() {
         displayOrder: 8,
         unlockedDepth: 28,
         dailyWithdrawalLimit: '75000',
-        careerReward: '90000',
+        careerReward: '0',
         enabled: true,
       }).returning({ id: career.id })
       if (!redDiamond) throw new Error('RED DIAMOND kariyeri oluşturulamadı.')
@@ -443,7 +443,6 @@ export async function updateCareer(input: {
   id: number
   unlockedDepth: number
   dailyWithdrawalLimit: number
-  careerReward: number
   enabled: boolean
 }) {
   await requireAdmin()
@@ -452,7 +451,8 @@ export async function updateCareer(input: {
     .set({
       unlockedDepth: Math.max(0, Math.min(33, Math.floor(safeNumber(input.unlockedDepth)))),
       dailyWithdrawalLimit: String(Math.max(0, safeNumber(input.dailyWithdrawalLimit))),
-      careerReward: String(Math.max(0, safeNumber(input.careerReward))),
+      // Cashback bağımsız bir programdır; kariyer kaydında ödül tutulmaz.
+      careerReward: '0',
       enabled: Boolean(input.enabled),
     })
     .where(eq(career.id, input.id))

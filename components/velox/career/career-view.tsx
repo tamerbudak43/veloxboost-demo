@@ -17,14 +17,13 @@ interface CareerViewProps {
   careerProgress: CareerProgress
   careers: CareerDef[]
   unlockedDepth: number
-  reward: { total: number; accrued: number; pending: number } | null
 }
 
 function fmt(value: number, format: 'count' | 'usdt') {
   return format === 'usdt' ? formatUSDT(value) : String(safeNumber(value))
 }
 
-export function CareerView({ summary, careerProgress, careers, unlockedDepth, reward }: CareerViewProps) {
+export function CareerView({ summary, careerProgress, careers, unlockedDepth }: CareerViewProps) {
   const { currentCareer, nextCareer, progress, requirements } = careerProgress
   const ordered = [...careers].sort((a, b) => a.displayOrder - b.displayOrder)
   const currentOrder = currentCareer.displayOrder
@@ -82,8 +81,6 @@ export function CareerView({ summary, careerProgress, careers, unlockedDepth, re
           <StatTile label="Günlük Çekim Limiti" value={formatUSDT(currentCareer.dailyWithdrawalLimit)} />
         </div>
       </div>
-      {reward && <div className="grid grid-cols-3 gap-3"><StatTile label="Toplam kariyer ödülü" value={formatUSDT(reward.total)} /><StatTile label="Tahakkuk eden" value={formatUSDT(reward.accrued)} /><StatTile label="Onay bekleyen" value={formatUSDT(reward.pending)} accent /></div>}
-
       {/* Requirements */}
       {nextCareer && (
         <Panel>
@@ -163,10 +160,9 @@ export function CareerView({ summary, careerProgress, careers, unlockedDepth, re
                     {c.unlockedDepth} seviye derinlik · {formatUSDT(c.dailyWithdrawalLimit)} günlük limit
                   </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <Eyebrow>Kariyer ödülü</Eyebrow>
-                  <p className="font-mono text-sm font-semibold text-bright">{formatUSDT(c.careerReward)}</p>
-                </div>
+                <span className="shrink-0 rounded-md border border-border bg-elevated px-2 py-1 font-mono text-xs font-semibold text-secondary-foreground">
+                  {c.unlockedDepth}/33
+                </span>
               </div>
             )
           })}

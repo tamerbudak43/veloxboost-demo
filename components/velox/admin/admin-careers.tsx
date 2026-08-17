@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Award, Check, Loader2 } from 'lucide-react'
 import { Panel, PanelHeader, Eyebrow } from '@/components/velox/primitives'
 import { applyOneTradeCareerPlan, updateCareer, updateCareerRequirement, updateCashbackTier } from '@/app/actions/admin'
-import { formatUSDT } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 type Requirement = {
@@ -29,7 +28,6 @@ export type AdminCareer = {
   displayOrder: number
   unlockedDepth: number
   dailyWithdrawalLimit: number
-  careerReward: number
   enabled: boolean
   requirement: Requirement
 }
@@ -64,7 +62,6 @@ function CareerRow({ c }: { c: AdminCareer }) {
   const [saved, setSaved] = useState(false)
   const [depth, setDepth] = useState(c.unlockedDepth)
   const [limit, setLimit] = useState(c.dailyWithdrawalLimit)
-  const [reward, setReward] = useState(c.careerReward)
   const [enabled, setEnabled] = useState(c.enabled)
   const [reqs, setReqs] = useState<Record<string, number>>(() => {
     const r = c.requirement
@@ -87,7 +84,6 @@ function CareerRow({ c }: { c: AdminCareer }) {
         id: c.id,
         unlockedDepth: depth,
         dailyWithdrawalLimit: limit,
-        careerReward: reward,
         enabled,
       })
       await updateCareerRequirement({ careerId: c.id, ...(reqs as Record<string, number>) } as never)
@@ -119,7 +115,7 @@ function CareerRow({ c }: { c: AdminCareer }) {
         </label>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <Field label="Açılan derinlik (0-33)">
           <input
             type="number"
@@ -136,15 +132,6 @@ function CareerRow({ c }: { c: AdminCareer }) {
             min={0}
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="velox-input"
-          />
-        </Field>
-        <Field label="Kariyer ödülü (USDT)">
-          <input
-            type="number"
-            min={0}
-            value={reward}
-            onChange={(e) => setReward(Number(e.target.value))}
             className="velox-input"
           />
         </Field>
@@ -167,7 +154,7 @@ function CareerRow({ c }: { c: AdminCareer }) {
 
       <div className="mt-4 flex items-center justify-end gap-3">
         <span className="text-xs text-muted-foreground">
-          {formatUSDT(reward)} ödül · {depth}/33 derinlik
+          {depth}/33 derinlik · Cashback bağımsız kademeden değerlendirilir
         </span>
         <button
           type="button"
@@ -234,6 +221,7 @@ function CashbackTierRow({ tier }: { tier: AdminCashbackTier }) {
 export function AdminCareers({ careers, cashbackTiers }: { careers: AdminCareer[]; cashbackTiers: AdminCashbackTier[] }) {
   const router = useRouter()
   const [applyingPlan, startPlanTransition] = useTransition()
+  const [activeTab, setActiveTab] = useState<'career' | 'cashback'>('career')
 
   function applyPlan() {
     if (!window.confirm('OneTrade demo planı uygulanacak. Kariyer koşulları ile bağımsız cashback hacim/ödül kademeleri ayrı ayrı güncellenecek. Devam edilsin mi?')) return
@@ -245,6 +233,23 @@ export function AdminCareers({ careers, cashbackTiers }: { careers: AdminCareer[
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-2 rounded-xl border border-border bg-card p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('career')}
+          className={cn('h-10 rounded-lg text-sm font-semibold transition-colors', activeTab === 'career' ? 'velox-gradient text-primary-foreground' : 'text-muted-foreground hover:text-bright')}
+        >
+          Kariyer Planı
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('cashback')}
+          className={cn('h-10 rounded-lg text-sm font-semibold transition-colors', activeTab === 'cashback' ? 'velox-gradient text-primary-foreground' : 'text-muted-foreground hover:text-bright')}
+        >
+          Cashback Planı
+        </button>
+      </div>
+      {activeTab === 'career' ? (
       <Panel>
         <PanelHeader
           title="Kariyer Yönetimi"
@@ -272,11 +277,13 @@ export function AdminCareers({ careers, cashbackTiers }: { careers: AdminCareer[
           ))}
         </div>
       </Panel>
+      ) : (
       <Panel>
         <PanelHeader title="Cashback Kademeleri" right={<Eyebrow>{cashbackTiers.length} bağımsız kademe</Eyebrow>} />
         <p className="border-b border-border px-4 py-3 text-xs leading-5 text-muted-foreground">Bu alan kariyer terfisini değiştirmez. Üye, kendi kariyerinden bağımsız olarak ağ hacmi ve aktif doğrudan ortak koşulunu tamamladığında demo cashback kademesine uygun görünür.</p>
         <div className="space-y-4 p-4">{cashbackTiers.length === 0 ? <p className="text-sm text-muted-foreground">Önce üstteki “Kariyer + cashback planını uygula” düğmesini kullan.</p> : cashbackTiers.map((tier) => <CashbackTierRow key={tier.id} tier={tier} />)}</div>
       </Panel>
+      )}
     </div>
   )
 }
