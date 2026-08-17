@@ -4,7 +4,7 @@ import { getMyProfile } from '@/app/actions/member'
 import { loadCareers, loadCommissionLevels, unlockedDepthFor } from '@/lib/network/config'
 import { db } from '@/lib/db'
 import { member, networkClosure } from '@/lib/db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 import { safeNumber } from '@/lib/format'
 import {
   buildDepthRows,
@@ -101,6 +101,53 @@ export async function getNetworkData() {
     totalEarnings: totalEarnings(earnings),
     careerProgress,
     unlockedDepth,
+  }
+}
+
+/**
+ * Direct referral dashboard data. This is deliberately separate from the
+ * multi-level network commission engine: only users whose sponsorId points
+ * directly at the signed-in member are included. Amounts are UI simulations
+ * based on recorded personal volume; no balance, payout, or ledger entry is
+ * created here.
+ */
+export async function getDirectReferralDashboardData() {
+  const profile = await getMyProfile()
+  if (!profile) throw new Error('Üyelik profili bulunamadı.')
+
+  const directs = await db
+    .select({
+      userId: member.userId,
+      name: member.name,
+      email: member.email,
+      veloxId: member.veloxId,
+      status: member.status,
+      career: member.career,
+      personalVolume: member.personalVolume,
+      createdAt: member.createdAt,
+    })
+    .from(member)
+    .where(eq(member.sponsorId, profile.userId))
+    .orderBy(desc(member.createdAt))
+
+  const partners = directs.map((item) => {
+    const turnover = safeNumber(item.personalVolume)
+    return {
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      turnover,
+      commission: turnover * 0.06,
+    }
+  })
+  const directTurnover = partners.reduce((total, item) => total + item.turnover, 0)
+
+  return {
+    referralCode: profile.referralCode,
+    directCount: partners.length,
+    directTurnover,
+    commissionRate: 6,
+    simulatedCommission: directTurnover * 0.06,
+    partners,
   }
 }
 
