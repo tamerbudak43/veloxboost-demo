@@ -13,6 +13,7 @@ import {
   Award,
   Percent,
   Network,
+  DatabaseZap,
   LogOut,
 } from 'lucide-react'
 import { VeloxLogo } from '@/components/velox/velox-logo'
@@ -23,6 +24,7 @@ const adminNav = [
   { label: 'Genel Bakış', href: '/admin', icon: LayoutDashboard },
   { label: 'Kullanıcılar', href: '/admin/users', icon: Users },
   { label: 'Ağ Arama', href: '/admin/network', icon: Network },
+  { label: 'Faz 1 Demo', href: '/admin/demo-simulation', icon: DatabaseZap },
   { label: 'Kariyer Yönetimi', href: '/admin/careers', icon: Award },
   { label: 'Komisyon Seviyeleri', href: '/admin/commissions', icon: Percent },
   { label: 'Çekim Onayları', href: '/admin/withdrawals', icon: ArrowDownToLine },

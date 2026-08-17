@@ -3,8 +3,8 @@
 import { getMyProfile } from '@/app/actions/member'
 import { loadCareers, loadCommissionLevels, unlockedDepthFor } from '@/lib/network/config'
 import { db } from '@/lib/db'
-import { member, networkClosure } from '@/lib/db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { investmentReceipt, member, networkClosure } from '@/lib/db/schema'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { safeNumber } from '@/lib/format'
 import {
   buildDepthRows,
@@ -16,6 +16,8 @@ import { legSummaries } from '@/lib/services/volume.service'
 import { evaluateCareer, type CareerMetrics } from '@/lib/services/career.service'
 import { totalEarnings } from '@/lib/services/commission.service'
 import { ensureCareerRewardAccrual } from '@/lib/services/career-reward.service'
+import { getDemoMarketScenarios } from '@/lib/network/demo-market-scenario'
+import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 
 /**
  * Assembles the network explorer from the signed-in member and the persisted
@@ -27,6 +29,7 @@ export async function getNetworkData() {
   if (!profile) throw new Error('Üyelik profili bulunamadı.')
 
   const rootId = profile.userId
+  const demoSimulationEnabled = process.env.VELOX_DEMO_SIMULATION !== 'false'
   const closureRows = await db
     .select({ descendantUserId: networkClosure.descendantUserId, depth: networkClosure.depth })
     .from(networkClosure)
@@ -34,8 +37,16 @@ export async function getNetworkData() {
 
   const depthByUserId = new Map(closureRows.map((row) => [row.descendantUserId, row.depth]))
   const userIds = [rootId, ...closureRows.map((row) => row.descendantUserId)]
-  const rows = await db.select().from(member).where(inArray(member.userId, userIds))
+  const [rows, investmentRows] = await Promise.all([
+    db.select().from(member).where(inArray(member.userId, userIds)),
+    db
+      .select({ userId: investmentReceipt.userId, total: sql<string>`coalesce(sum(${investmentReceipt.amount}), 0)` })
+      .from(investmentReceipt)
+      .where(and(inArray(investmentReceipt.userId, userIds), eq(investmentReceipt.status, 'confirmed')))
+      .groupBy(investmentReceipt.userId),
+  ])
   const byUserId = new Map(rows.map((row) => [row.userId, row]))
+  const investmentByUserId = new Map(investmentRows.map((row) => [row.userId, safeNumber(row.total)]))
 
   // Resolve each member's direct top-level branch under the signed-in user.
   const legRootFor = (userId: string) => {
@@ -48,7 +59,7 @@ export async function getNetworkData() {
     return current?.userId ?? userId
   }
 
-  const members = rows.map((row) => ({
+  const persistedMembers = rows.map((row) => ({
     id: row.userId,
     name: row.name,
     veloxId: row.veloxId,
@@ -57,16 +68,25 @@ export async function getNetworkData() {
     legRootId: row.userId === rootId ? rootId : legRootFor(row.userId),
     status: row.status === 'qualified' ? 'qualified' as const : row.status === 'inactive' ? 'inactive' as const : 'active' as const,
     career: row.career,
-    // Investment balances are not inferred from member.balance. They will be
-    // populated by the ledger/contract phase.
-    personalInvestment: 0,
+    // Only confirmed demo receipts are included. Pending instructions are not
+    // treated as investment or payment records.
+    personalInvestment: investmentByUserId.get(row.userId) ?? 0,
     personalVolume: safeNumber(row.personalVolume),
     joinedAt: row.createdAt.toISOString(),
   }))
-  const currentCareer = profile.career
+  const simulation = demoSimulationEnabled
+    ? buildDemoGrowthSimulation({ userId: profile.userId, name: profile.name, veloxId: profile.veloxId, career: profile.career })
+    : null
+  // Once the admin creates the phase-1 test dataset, use those persisted
+  // DEMO rows so the investor and admin views inspect the same test data.
+  const hasPersistedDemo = persistedMembers.some((item) => item.id.startsWith('demo-sim-'))
+  const members = hasPersistedDemo ? persistedMembers : simulation?.members ?? persistedMembers
+  const currentCareer = (hasPersistedDemo || simulation) ? simulation?.simulation.projectedCareer ?? profile.career : profile.career
 
   const [careers, commissionLevels] = await Promise.all([loadCareers(), loadCommissionLevels()])
-  const unlockedDepth = unlockedDepthFor(careers, currentCareer)
+  // The simulated view is a training dataset and exposes all configured
+  // depths for review. It never changes the member's persisted career.
+  const unlockedDepth = (hasPersistedDemo || simulation) ? 33 : unlockedDepthFor(careers, currentCareer)
 
   const summary = networkSummary(members, rootId, currentCareer)
   const tree = buildSponsorTree(members, rootId)
@@ -101,6 +121,55 @@ export async function getNetworkData() {
     totalEarnings: totalEarnings(earnings),
     careerProgress,
     unlockedDepth,
+    marketScenarios: getDemoMarketScenarios(),
+    simulation: simulation?.simulation ?? null,
+  }
+}
+
+/**
+ * Direct referral dashboard data. This is deliberately separate from the
+ * multi-level network commission engine: only users whose sponsorId points
+ * directly at the signed-in member are included. Amounts are UI simulations
+ * based on recorded personal volume; no balance, payout, or ledger entry is
+ * created here.
+ */
+export async function getDirectReferralDashboardData() {
+  const profile = await getMyProfile()
+  if (!profile) throw new Error('Üyelik profili bulunamadı.')
+
+  const directs = await db
+    .select({
+      userId: member.userId,
+      name: member.name,
+      email: member.email,
+      veloxId: member.veloxId,
+      status: member.status,
+      career: member.career,
+      personalVolume: member.personalVolume,
+      createdAt: member.createdAt,
+    })
+    .from(member)
+    .where(eq(member.sponsorId, profile.userId))
+    .orderBy(desc(member.createdAt))
+
+  const partners = directs.map((item) => {
+    const turnover = safeNumber(item.personalVolume)
+    return {
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      turnover,
+      commission: turnover * 0.06,
+    }
+  })
+  const directTurnover = partners.reduce((total, item) => total + item.turnover, 0)
+
+  return {
+    referralCode: profile.referralCode,
+    directCount: partners.length,
+    directTurnover,
+    commissionRate: 6,
+    simulatedCommission: directTurnover * 0.06,
+    partners,
   }
 }
 

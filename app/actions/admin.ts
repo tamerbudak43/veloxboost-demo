@@ -1,11 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { and, asc, count, eq, ilike, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, like, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { career, careerRequirement, commissionLevel, member, withdrawal } from '@/lib/db/schema'
+import { career, careerRequirement, commissionLevel, demoLedgerEntry, investmentReceipt, member, networkClosure, withdrawal } from '@/lib/db/schema'
 import { getSessionMember, requireAdmin } from '@/lib/admin-auth'
 import { safeNumber } from '@/lib/format'
+import { demoCommissionPlan } from '@/lib/network/demo-commission-plan'
+import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 
 /** Lightweight check used by the admin login form after sign-in. */
 export async function checkAdminAccess(): Promise<boolean> {
@@ -13,8 +15,7 @@ export async function checkAdminAccess(): Promise<boolean> {
   return me?.role === 'admin'
 }
 
-/** Creates only non-financial initial configuration for a fresh database.
- * Rates and thresholds are deliberately zero until an administrator sets them. */
+/** Creates the default demo configuration for a fresh database. */
 async function ensureInitialAdminConfig() {
   const existing = await db.select({ total: count() }).from(career)
   if ((existing[0]?.total ?? 0) === 0) {
@@ -30,14 +31,12 @@ async function ensureInitialAdminConfig() {
   }
   const commissionCount = await db.select({ total: count() }).from(commissionLevel)
   if ((commissionCount[0]?.total ?? 0) === 0) {
-    await db.insert(commissionLevel).values(
-      Array.from({ length: 33 }, (_, index) => ({
-        level: index + 1,
-        percentage: '0',
-        requiredCareerCode: 'STARTER',
-        enabled: false,
-      })),
-    )
+    await db.insert(commissionLevel).values(demoCommissionPlan.map((item) => ({
+      level: item.level,
+      percentage: String(item.percentage),
+      requiredCareerCode: item.requiredCareerCode,
+      enabled: item.enabled,
+    })))
   }
 }
 
@@ -93,6 +92,109 @@ export async function loadAdminOverview() {
       status: row.status as 'pending',
       requestedAt: row.createdAt.toISOString(),
     })),
+  }
+}
+
+/* ------------------------- Phase-1 demo simulator ----------------------- */
+
+const DEMO_PREFIX = 'demo-sim-'
+const DEMO_RUN_KEY = 'phase-1-growth-v1'
+
+/**
+ * Creates a reproducible phase-1 dataset for the signed-in administrator.
+ * No auth account, wallet record, payment instruction or blockchain request
+ * is created for any synthetic member. Every generated row is marked DEMO.
+ */
+export async function seedPhaseOneDemoSimulation() {
+  const admin = await requireAdmin()
+  const { members: graph, simulation } = buildDemoGrowthSimulation({
+    userId: admin.userId,
+    name: admin.name,
+    veloxId: admin.veloxId,
+    career: admin.career,
+  })
+  const demoMembers = graph.filter((item) => item.id.startsWith(DEMO_PREFIX))
+
+  await db.transaction(async (tx) => {
+    await tx.delete(demoLedgerEntry).where(eq(demoLedgerEntry.runKey, DEMO_RUN_KEY))
+    await tx.delete(withdrawal).where(like(withdrawal.userId, `${DEMO_PREFIX}%`))
+    await tx.delete(investmentReceipt).where(like(investmentReceipt.userId, `${DEMO_PREFIX}%`))
+    await tx.delete(networkClosure).where(or(like(networkClosure.ancestorUserId, `${DEMO_PREFIX}%`), like(networkClosure.descendantUserId, `${DEMO_PREFIX}%`)))
+    await tx.delete(member).where(like(member.userId, `${DEMO_PREFIX}%`))
+
+    if (demoMembers.length === 0) return
+    await tx.insert(member).values(demoMembers.map((item, index) => ({
+      userId: item.id,
+      name: item.name,
+      email: `demo+${item.id}@velox.invalid`,
+      veloxId: item.veloxId,
+      referralCode: `DEMO${String(index + 1).padStart(4, '0')}`,
+      sponsorId: item.sponsorId,
+      role: 'member',
+      status: item.status,
+      career: item.career,
+      personalVolume: String(item.personalInvestment),
+      teamVolume: '0',
+      balance: '0',
+      directCount: graph.filter((child) => child.sponsorId === item.id).length,
+      createdAt: new Date(item.joinedAt),
+    })))
+
+    const byId = new Map(graph.map((item) => [item.id, item]))
+    const closureRows: { ancestorUserId: string; descendantUserId: string; depth: number }[] = []
+    for (const item of demoMembers) {
+      let parentId = item.sponsorId
+      let depth = 1
+      while (parentId && depth <= 33) {
+        closureRows.push({ ancestorUserId: parentId, descendantUserId: item.id, depth })
+        parentId = byId.get(parentId)?.sponsorId ?? null
+        depth++
+      }
+    }
+    if (closureRows.length) await tx.insert(networkClosure).values(closureRows)
+
+    const now = new Date()
+    await tx.insert(investmentReceipt).values(demoMembers.map((item) => ({
+      userId: item.id,
+      receiptNumber: `DEMO-${item.veloxId}`,
+      amount: String(item.personalInvestment),
+      asset: 'USDT',
+      network: 'DEMO',
+      receivingAddress: 'DEMO-NO-WALLET',
+      transactionHash: `DEMO-${item.id.toUpperCase()}`,
+      status: 'confirmed',
+      issuedAt: new Date(item.joinedAt),
+      confirmedAt: new Date(item.joinedAt),
+    })))
+
+    const ledgerRows = demoMembers.flatMap((item) => {
+      const accrual = Number((item.personalInvestment * 0.019).toFixed(2))
+      const rows = [
+        { runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_investment', amount: String(item.personalInvestment), status: 'confirmed_demo', reference: `DEMO-${item.veloxId}-INV`, occurredAt: new Date(item.joinedAt) },
+        { runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-ACC`, occurredAt: now },
+      ]
+      if (accrual >= 25) rows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_auto_withdrawal', amount: String(-accrual), status: 'auto_withdrawn_demo', reference: `DEMO-${item.veloxId}-WDL`, occurredAt: now })
+      return rows
+    })
+    await tx.insert(demoLedgerEntry).values(ledgerRows)
+  })
+
+  revalidatePath('/partners')
+  revalidatePath('/admin')
+  revalidatePath('/admin/network')
+  revalidatePath('/admin/demo-simulation')
+  return { created: demoMembers.length, day: simulation.currentDay }
+}
+
+export async function loadPhaseOneDemoSimulation() {
+  await requireAdmin()
+  const [members, ledger] = await Promise.all([
+    db.select().from(member).where(like(member.userId, `${DEMO_PREFIX}%`)).orderBy(asc(member.createdAt)),
+    db.select().from(demoLedgerEntry).where(eq(demoLedgerEntry.runKey, DEMO_RUN_KEY)).orderBy(desc(demoLedgerEntry.occurredAt)).limit(200),
+  ])
+  return {
+    members: members.map((item) => ({ ...mapMember(item), personalInvestment: safeNumber(item.personalVolume), demo: true })),
+    ledger: ledger.map((item) => ({ ...item, amount: safeNumber(item.amount), occurredAt: item.occurredAt.toISOString() })),
   }
 }
 
