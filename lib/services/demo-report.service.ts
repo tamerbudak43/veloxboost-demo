@@ -15,6 +15,8 @@ export type DemoDailyReport = {
   arbitrageGross: number
   memberAccrual: number
   referralExpense: number
+  networkIncome: number
+  totalDistribution: number
   automaticPayments: number
   paymentQueue: number
   profitLoss: number
@@ -57,26 +59,28 @@ export async function loadDemoReports() {
     const arbitrageGross = sum('demo_arbitrage_income')
     const memberAccrual = sum('demo_accrual')
     const referralExpense = sum('demo_referral_commission')
+    const networkIncome = sum('demo_network_commission')
     const automaticPayments = Math.abs(sum('demo_auto_withdrawal'))
     // Pending credits carry forward until the scenario's 25 USDT automatic
     // withdrawal threshold is reached, matching the demo ledger behaviour.
-    paymentQueue = Math.max(0, paymentQueue + memberAccrual + referralExpense - automaticPayments)
+    const totalDistribution = memberAccrual + referralExpense + networkIncome
+    paymentQueue = Math.max(0, paymentQueue + totalDistribution - automaticPayments)
     const openingCash = cash
     cash += deposits + arbitrageGross - automaticPayments
     return {
-      date, registrations: newMembers.length, cumulativeMembers, deposits, arbitrageGross, memberAccrual, referralExpense,
-      automaticPayments, paymentQueue, profitLoss: arbitrageGross - memberAccrual - referralExpense,
+      date, registrations: newMembers.length, cumulativeMembers, deposits, arbitrageGross, memberAccrual, referralExpense, networkIncome, totalDistribution,
+      automaticPayments, paymentQueue, profitLoss: arbitrageGross - totalDistribution,
       openingCash, closingCash: cash, turnover: deposits + arbitrageGross,
     }
   })
   const payments: DemoPaymentDetail[] = ledger
-    .filter((row) => row.entryType === 'demo_auto_withdrawal' || row.entryType === 'demo_referral_commission')
+    .filter((row) => row.entryType === 'demo_auto_withdrawal' || row.entryType === 'demo_referral_commission' || row.entryType === 'demo_network_commission')
     .map((row) => ({ date: dayKey(row.occurredAt), name: row.userName, veloxId: row.veloxId, type: row.entryType, amount: safeNumber(row.amount), reference: row.reference }))
   const totals = daily.reduce((total, row) => ({
     deposits: total.deposits + row.deposits, arbitrageGross: total.arbitrageGross + row.arbitrageGross,
-    memberAccrual: total.memberAccrual + row.memberAccrual, referralExpense: total.referralExpense + row.referralExpense,
+    memberAccrual: total.memberAccrual + row.memberAccrual, referralExpense: total.referralExpense + row.referralExpense, networkIncome: total.networkIncome + row.networkIncome,
     automaticPayments: total.automaticPayments + row.automaticPayments, profitLoss: total.profitLoss + row.profitLoss,
     turnover: total.turnover + row.turnover,
-  }), { deposits: 0, arbitrageGross: 0, memberAccrual: 0, referralExpense: 0, automaticPayments: 0, profitLoss: 0, turnover: 0 })
+  }), { deposits: 0, arbitrageGross: 0, memberAccrual: 0, referralExpense: 0, networkIncome: 0, automaticPayments: 0, profitLoss: 0, turnover: 0 })
   return { daily, payments, totals, endingCash: daily.at(-1)?.closingCash ?? 0 }
 }

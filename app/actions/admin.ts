@@ -299,6 +299,7 @@ export async function resetPhaseOneDemoBaseline(confirmation: string) {
  */
 export async function seedPhaseOneDemoSimulation() {
   const admin = await requireAdmin()
+  await ensureInitialAdminConfig()
   const { members: graph, simulation } = buildDemoGrowthSimulation({
     userId: admin.userId,
     name: admin.name,
@@ -333,6 +334,12 @@ export async function seedPhaseOneDemoSimulation() {
     })))
 
     const byId = new Map(graph.map((item) => [item.id, item]))
+    const [commissionRows, careerRows] = await Promise.all([
+      tx.select().from(commissionLevel),
+      tx.select().from(career),
+    ])
+    const commissionByDepth = new Map(commissionRows.filter((row) => row.enabled).map((row) => [row.level, row]))
+    const careerOrder = new Map(careerRows.map((row) => [row.code, row.displayOrder]))
     const closureRows: { ancestorUserId: string; descendantUserId: string; depth: number }[] = []
     for (const item of demoMembers) {
       let parentId = item.sponsorId
@@ -390,6 +397,28 @@ export async function seedPhaseOneDemoSimulation() {
         const accrual = Number((item.personalInvestment * (DEMO_DAILY_DISTRIBUTION_AVERAGE / 100)).toFixed(2))
         ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-ACC`, occurredAt })
         addUnpaidCredit(item.id, accrual)
+
+        // Each eligible upline receives its separately configured network
+        // rate from this member's daily investment yield. The current admin
+        // commission plan and career gate are the sole source of truth.
+        let ancestorId = item.sponsorId
+        let depth = 1
+        while (ancestorId && depth <= 33) {
+          const recipient = byId.get(ancestorId)
+          const level = commissionByDepth.get(depth)
+          if (!recipient || !level) break
+          const requiredCareerOrder = careerOrder.get(level.requiredCareerCode) ?? 0
+          const recipientCareerOrder = careerOrder.get(recipient.career) ?? 0
+          if (recipientCareerOrder >= requiredCareerOrder) {
+            const networkCommission = Number((accrual * (safeNumber(level.percentage) / 100)).toFixed(2))
+            if (networkCommission > 0) {
+              ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: recipient.id, userName: recipient.name, veloxId: recipient.veloxId, entryType: 'demo_network_commission', amount: String(networkCommission), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-L${depth}-NET`, occurredAt })
+              addUnpaidCredit(recipient.id, networkCommission)
+            }
+          }
+          ancestorId = recipient.sponsorId
+          depth++
+        }
       }
       for (const [recipientId, payout] of unpaidCredits) {
         const recipient = byId.get(recipientId)
