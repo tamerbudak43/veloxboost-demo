@@ -9,6 +9,7 @@ export function Panel({
 }: ComponentPropsWithoutRef<'div'>) {
   return (
     <div
+      {...props}
       className={cn(
         'rounded-lg border border-border bg-card',
         className,

@@ -106,6 +106,12 @@ const locales: Record<LanguageCode, string> = {
   fr: 'fr-FR', kk: 'kk-KZ', bg: 'bg-BG', id: 'id-ID', ar: 'ar-SA', zh: 'zh-CN', hu: 'hu-HU', fa: 'fa-IR',
 }
 
+const withdrawLabels: Record<LanguageCode, string> = {
+  en: 'Withdraw', tr: 'Bakiye Çek', ru: 'Вывести', uk: 'Вивести', es: 'Retirar', pt: 'Sacar',
+  de: 'Auszahlen', it: 'Preleva', fr: 'Retirer', kk: 'Шығару', bg: 'Теглене', id: 'Tarik',
+  ar: 'سحب', zh: '提现', hu: 'Kifizetés', fa: 'برداشت',
+}
+
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
@@ -129,7 +135,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({
     language,
     setLanguage: applyLanguage,
-    t: { ...dictionaries[language], ...pageTranslations[language] },
+    t: { ...dictionaries[language], withdraw: withdrawLabels[language], ...pageTranslations[language] },
     locale: locales[language],
     direction: language === 'ar' || language === 'fa' ? 'rtl' as const : 'ltr' as const,
   }), [language])
