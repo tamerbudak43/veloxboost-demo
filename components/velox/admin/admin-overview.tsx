@@ -6,7 +6,7 @@ import { Users, ArrowUpRight, ArrowDownRight, Waves, TrendingUp, Clock, FileDown
 import { Panel, StatusPill } from '@/components/velox/primitives'
 import { formatUSDT, formatNumber, percentOf, safeArray, safeNumber } from '@/lib/format'
 import type { AdminKpi, WithdrawalRequest } from '@/lib/types'
-import type { DemoCountryReport, DemoDailyReport } from '@/lib/services/demo-report.service'
+import type { DemoCityReport, DemoDailyReport } from '@/lib/services/demo-report.service'
 
 const COUNTRY_DOTS: Record<string, { x: number; y: number }> = {
   TR: { x: 59, y: 46 }, DE: { x: 51, y: 36 }, AZ: { x: 63, y: 44 }, KZ: { x: 69, y: 39 },
@@ -14,7 +14,7 @@ const COUNTRY_DOTS: Record<string, { x: number; y: number }> = {
 }
 const COUNTRY_COLORS = ['#22d3ee', '#3b82f6', '#fbbf24', '#d946ef', '#34d399', '#fb7185', '#a78bfa', '#f97316']
 
-function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
+function CountryWorldMap({ cities }: { cities: DemoCityReport[] }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -33,7 +33,7 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
         { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1624' }, { weight: 3 }] },
         { featureType: 'road', elementType: 'all', stylers: [{ visibility: 'off' }] },
       ] })
-      countries.forEach((item, index) => { const circle = new maps.Circle({ map, center: { lat: item.lat, lng: item.lng }, radius: 95000 + item.members * 15000, strokeColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length], strokeOpacity: 1, strokeWeight: 2, fillColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length], fillOpacity: .72, clickable: true }); const info = new maps.InfoWindow({ content: `<div style="color:#10233a;font:500 13px Arial"><strong>${item.city}, ${item.country}</strong><br/>Demo üye: ${item.members}<br/>Demo hacim: ${formatUSDT(item.deposits, 0)}</div>` }); circle.addListener('click', () => info.setPosition(circle.getCenter())) ; circle.addListener('click', () => info.open({ map })) })
+      cities.forEach((item, index) => { const circle = new maps.Circle({ map, center: { lat: item.lat, lng: item.lng }, radius: 95000 + item.members * 15000, strokeColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length], strokeOpacity: 1, strokeWeight: 2, fillColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length], fillOpacity: .72, clickable: true }); const info = new maps.InfoWindow({ content: `<div style="color:#10233a;font:500 13px Arial"><strong>${item.city}, ${item.country}</strong><br/>Demo üye: ${item.members}<br/>Demo hacim: ${formatUSDT(item.deposits, 0)}</div>` }); circle.addListener('click', () => info.setPosition(circle.getCenter())) ; circle.addListener('click', () => info.open({ map })) })
       setReady(true)
     }
     if ((window as any).google?.maps) { init(); return }
@@ -41,21 +41,21 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
     const existing = document.getElementById(id)
     if (existing) { existing.addEventListener('load', init); return () => existing.removeEventListener('load', init) }
     const script = document.createElement('script'); script.id = id; script.async = true; script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`; script.addEventListener('load', init); document.head.appendChild(script)
-  }, [countries, key])
-  const max = Math.max(...countries.map((item) => item.deposits), 1)
+  }, [cities, key])
+  const max = Math.max(...cities.map((item) => item.deposits), 1)
   return <div className="rounded-lg border border-border bg-surface p-4">
     <div className="flex items-center justify-between"><h3 className="text-sm font-medium">Demo kayıt ülkeleri</h3><span className="text-[10px] text-amber-200">Sentetik konumlar</span></div>
     {key ? <div ref={mapRef} className="mt-3 h-64 overflow-hidden rounded-md border border-border" aria-label="Demo ülke dağılımı Google haritası" /> : <svg viewBox="0 0 100 62" className="mt-3 w-full" role="img" aria-label="Demo ülke dağılımı dünya haritası">
       <path d="M5 18l10-7 12 2 5 8-5 7-12 1-7 7-5-5 3-8zM32 10l8 3 3 8-4 6-5-4zM44 15l15-5 14 3 10 8-3 6-10 1-5 7-12-3-7-8zM58 36l9 2 6 11-5 10-7-4-4-10zM78 40l11 3 7 8-4 7-10-2-6-8z" fill="currentColor" className="text-background" stroke="currentColor" strokeWidth=".7" opacity=".95" />
       <path d="M5 18l10-7 12 2 5 8-5 7-12 1-7 7-5-5 3-8zM32 10l8 3 3 8-4 6-5-4zM44 15l15-5 14 3 10 8-3 6-10 1-5 7-12-3-7-8zM58 36l9 2 6 11-5 10-7-4-4-10zM78 40l11 3 7 8-4 7-10-2-6-8z" fill="none" stroke="#1e3a5f" strokeWidth=".5" />
-      {countries.map((item, index) => {
+      {cities.map((item, index) => {
         const point = COUNTRY_DOTS[item.code]
         if (!point) return null
         return <g key={item.code}><circle cx={point.x} cy={point.y} r={2 + (item.deposits / max) * 2.4} fill={COUNTRY_COLORS[index % COUNTRY_COLORS.length]} opacity=".88" /><text x={point.x + 2.5} y={point.y - 2} fill="#e5eefc" fontSize="3">{item.code}</text></g>
       })}
     </svg>}
     {key && !ready ? <p className="mt-2 text-[11px] text-muted-foreground">Google haritası yükleniyor…</p> : null}
-    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">{countries.map((item, index) => <div key={item.code} className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><i className="size-2 shrink-0 rounded-full" style={{ backgroundColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length] }} />{item.city}, {item.country}</span><span className="font-mono text-foreground">{item.members} · {formatUSDT(item.deposits, 0)}</span></div>)}</div>
+    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">{cities.map((item, index) => <div key={`${item.code}-${item.city}`} className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><i className="size-2 shrink-0 rounded-full" style={{ backgroundColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length] }} />{item.city}, {item.country}</span><span className="font-mono text-foreground">{item.members} · {formatUSDT(item.deposits, 0)}</span></div>)}</div>
   </div>
 }
 
@@ -113,7 +113,7 @@ function KpiCard({
   )
 }
 
-function DemoReportOverview({ daily, countries, endingCash }: { daily: DemoDailyReport[]; countries: DemoCountryReport[]; endingCash: number }) {
+function DemoReportOverview({ daily, cities, endingCash }: { daily: DemoDailyReport[]; cities: DemoCityReport[]; endingCash: number }) {
   const current = daily.at(-1)
   const chartMax = Math.max(...daily.flatMap((row) => [row.deposits, row.memberAccrual, row.referralExpense, row.networkIncome]), 1)
 
@@ -152,12 +152,12 @@ function DemoReportOverview({ daily, countries, endingCash }: { daily: DemoDaily
         </div>
         <div className="rounded-lg border border-border bg-surface p-4"><h3 className="text-sm font-medium">Ağ büyüme hızı</h3><div className="mt-4 space-y-3">{daily.map((row, index) => { const previous = daily[index - 1]?.cumulativeMembers ?? 0; const growth = previous ? ((row.cumulativeMembers - previous) / previous) * 100 : 0; return <div key={row.date} className="flex items-center justify-between gap-3 text-xs"><span className="text-muted-foreground">{row.date}</span><span>{row.registrations} yeni · {row.cumulativeMembers} ağ</span><span className="font-mono text-light-cyan">{index === 0 ? 'Başlangıç' : `%${formatNumber(growth, 1)}`}</span></div> })}</div></div>
       </div>
-      <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-2"><DistributionDonut current={current} /><CountryWorldMap countries={countries} /></div>
+      <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-2"><DistributionDonut current={current} /><CountryWorldMap cities={cities} /></div>
     </Panel>
   )
 }
 
-export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; countries: DemoCountryReport[]; endingCash: number } }) {
+export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; cities: DemoCityReport[]; endingCash: number } }) {
   const queue = safeArray<WithdrawalRequest>(withdrawals)
     .filter((w) => w?.status === 'pending')
     .slice(0, 4)
@@ -213,7 +213,7 @@ export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi
         />
       </div>
 
-      <DemoReportOverview daily={demoReports.daily} countries={demoReports.countries} endingCash={demoReports.endingCash} />
+      <DemoReportOverview daily={demoReports.daily} cities={demoReports.cities} endingCash={demoReports.endingCash} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Volume trend */}
