@@ -72,7 +72,7 @@ export function TopNav({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         {/* USDT selector */}
         <button
           type="button"
-          className="ml-1 hidden items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-elevated md:inline-flex"
+          className="ms-1 hidden items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-elevated md:inline-flex"
         >
           <span className="size-2 rounded-full bg-cyan" />
           USDT
@@ -80,7 +80,7 @@ export function TopNav({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         </button>
       </nav>
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ms-auto flex items-center gap-1.5">
         <Link
           href="/deposit"
           className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'hidden sm:inline-flex')}
@@ -117,7 +117,7 @@ export function TopNav({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         <div className="relative">
           <button
             type="button"
-            aria-label="Profil menüsü"
+            aria-label={t.profileMenu}
             onClick={() => setMenuOpen((o) => !o)}
             className="flex size-8 items-center justify-center rounded-full border border-border bg-elevated text-bright transition-colors hover:border-cyan/40"
           >
@@ -127,7 +127,7 @@ export function TopNav({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-10 z-40 w-44 overflow-hidden rounded-lg border border-border bg-popover py-1 shadow-lg shadow-black/40">
+              <div className="absolute end-0 top-10 z-40 w-44 overflow-hidden rounded-lg border border-border bg-popover py-1 shadow-lg shadow-black/40">
                 <Link
                   href="/settings"
                   onClick={() => setMenuOpen(false)}

@@ -60,7 +60,7 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <div ref={rootRef} className="relative hidden sm:block">
+    <div ref={rootRef} className="relative block">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -75,12 +75,12 @@ export function LanguageSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-72 overflow-hidden rounded-xl border border-border bg-popover p-2 shadow-2xl shadow-black/60">
+        <div className="absolute end-0 top-10 z-50 w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-border bg-popover p-2 shadow-2xl shadow-black/60">
           <div className="px-2 pb-2 pt-1">
             <p className="text-sm font-semibold text-foreground">{t.language}</p>
             <p className="text-xs text-muted-foreground">{t.languageHint}</p>
           </div>
-          <div role="listbox" aria-label="Diller" className="max-h-[min(70vh,480px)] space-y-1 overflow-y-auto pr-1">
+          <div role="listbox" aria-label={t.language} className="max-h-[min(70vh,480px)] space-y-1 overflow-y-auto pe-1">
             {languages.map((language) => {
               const active = language.code === selectedCode
               return (
@@ -91,7 +91,7 @@ export function LanguageSwitcher() {
                   aria-selected={active}
                   onClick={() => chooseLanguage(language)}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left transition-colors',
+                    'flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-start transition-colors',
                     active
                       ? 'border-cyan/50 bg-cyan/10 text-cyan'
                       : 'border-border bg-card text-foreground hover:border-cyan/30 hover:bg-elevated',

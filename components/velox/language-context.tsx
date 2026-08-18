@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { pageTranslations, type PageDictionary } from './page-translations'
 
 export type LanguageCode = 'tr' | 'en' | 'ru' | 'uk' | 'es' | 'pt' | 'de' | 'it' | 'fr' | 'kk' | 'bg' | 'id' | 'ar' | 'zh' | 'hu' | 'fa'
 
@@ -95,7 +96,14 @@ const dictionaries: Record<LanguageCode, Dictionary> = {
 type LanguageContextValue = {
   language: LanguageCode
   setLanguage: (language: LanguageCode) => void
-  t: Dictionary
+  t: Dictionary & PageDictionary
+  locale: string
+  direction: 'ltr' | 'rtl'
+}
+
+const locales: Record<LanguageCode, string> = {
+  tr: 'tr-TR', en: 'en-US', ru: 'ru-RU', uk: 'uk-UA', es: 'es-ES', pt: 'pt-PT', de: 'de-DE', it: 'it-IT',
+  fr: 'fr-FR', kk: 'kk-KZ', bg: 'bg-BG', id: 'id-ID', ar: 'ar-SA', zh: 'zh-CN', hu: 'hu-HU', fa: 'fa-IR',
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
@@ -115,7 +123,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.dir = nextLanguage === 'ar' || nextLanguage === 'fa' ? 'rtl' : 'ltr'
   }
 
-  const value = useMemo(() => ({ language, setLanguage: applyLanguage, t: dictionaries[language] }), [language])
+  const value = useMemo(() => ({
+    language,
+    setLanguage: applyLanguage,
+    t: { ...dictionaries[language], ...pageTranslations[language] },
+    locale: locales[language],
+    direction: language === 'ar' || language === 'fa' ? 'rtl' as const : 'ltr' as const,
+  }), [language])
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
 }
 
