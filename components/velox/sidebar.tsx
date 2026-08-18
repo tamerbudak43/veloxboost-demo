@@ -8,7 +8,7 @@ import { VeloxLogo } from './velox-logo'
 import { useLanguage } from './language-context'
 
 function isActive(pathname: string, href: string) {
-  if (href === '/arbitraj') return pathname === '/' || pathname === '/arbitraj'
+  if (href === '/dashboard') return pathname === '/' || pathname === '/dashboard'
   return pathname === href
 }
 
@@ -19,16 +19,16 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     'NAVİGASYON — PANEL': t.panel, 'NAVİGASYON — KONTROL': t.control, AĞ: t.network, HESAP: t.account,
   }
   const itemLabels: Record<string, string> = {
-    '/arbitraj': t.arbitrage, '/arbitraj-pro': t.arbitragePro, '/arbitraj-havuzlari': t.pools, '/velox-trade': t.trade, '/liquidity': t.liquidity, '/pool-percentage': t.poolPercent,
+    '/dashboard': 'Ana Panel', '/arbitraj': t.arbitrage, '/arbitraj-pro': t.arbitragePro, '/arbitraj-havuzlari': t.pools, '/velox-trade': t.trade, '/liquidity': t.liquidity, '/pool-percentage': t.poolPercent,
     '/reports': t.reports, '/documents': t.documents, '/contracts': t.allContracts, '/my-contracts': t.contract, '/contract-portfolio': t.myContracts, '/investor-statistics': t.investorStats, '/marketing-statistics': t.marketingStats, '/career': t.career, '/products': t.products,
     '/partner-program': t.partnerProgram, '/partner-challenge': t.partnerChallenge, '/partner-boost': t.partnerBoost, '/partners': t.networkProgram, '/ranks': t.ranks,
-    '/settings': t.accountSettings, '/faq': t.faq, '/help': t.help,
+    '/kyc': 'KYC Doğrulama', '/settings': t.accountSettings, '/faq': t.faq, '/help': t.help,
   }
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
       <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
-        <Link href="/arbitraj" onClick={onNavigate} aria-label="VELOX ana sayfa">
+        <Link href="/dashboard" onClick={onNavigate} aria-label="VELOX ana sayfa">
           <VeloxLogo size={22} />
         </Link>
       </div>

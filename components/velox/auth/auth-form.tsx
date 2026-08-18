@@ -77,7 +77,7 @@ export function AuthForm({
           return
         }
       }
-      router.push('/arbitraj')
+      router.push('/dashboard')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu.')

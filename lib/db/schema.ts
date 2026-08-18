@@ -96,6 +96,33 @@ export const member = pgTable('member', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
+// Member-owned KYC profile. This table stores profile data only; identity
+// document images and liveness captures must be handled by a compliant KYC
+// provider in production rather than being uploaded directly to this demo.
+export const kycProfile = pgTable('kyc_profile', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().unique(),
+  fullName: text('fullName').notNull(),
+  birthDate: text('birthDate').notNull(),
+  nationality: text('nationality').notNull(),
+  country: text('country').notNull(),
+  city: text('city').notNull(),
+  addressLine: text('addressLine').notNull(),
+  postalCode: text('postalCode'),
+  phone: text('phone').notNull(),
+  documentType: text('documentType').notNull().default('national_id'),
+  documentNumber: text('documentNumber').notNull(),
+  documentExpiry: text('documentExpiry'),
+  walletAsset: text('walletAsset').notNull().default('USDT'),
+  walletNetwork: text('walletNetwork').notNull().default('BEP20'),
+  walletAddress: text('walletAddress').notNull(),
+  status: text('status').notNull().default('draft'), // draft | pending | approved | rejected
+  consentAccepted: boolean('consentAccepted').notNull().default(false),
+  submittedAt: timestamp('submittedAt'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+})
+
 // --- Network engine tables -------------------------------------------------
 // Closure table: one row per ancestor→descendant pair with the depth between
 // them (1..33). Enables fast team-size / depth / volume aggregation without

@@ -12,6 +12,7 @@ import {
   Files,
   FolderOpen,
   Gauge,
+  House,
   LayoutGrid,
   LifeBuoy,
   LogOut,
@@ -43,6 +44,7 @@ export const navSections: NavSection[] = [
   {
     title: 'NAVİGASYON — PANEL',
     items: [
+      { label: 'Ana Panel', href: '/dashboard', icon: House },
       { label: 'Arbitraj', href: '/arbitraj', icon: ArrowLeftRight },
       { label: 'Arbitraj Pro', href: '/arbitraj-pro', icon: Gauge },
       { label: 'Arbitraj Havuzları', href: '/arbitraj-havuzlari', icon: Boxes },
@@ -78,6 +80,7 @@ export const navSections: NavSection[] = [
   {
     title: 'HESAP',
     items: [
+      { label: 'KYC Doğrulama', href: '/kyc', icon: BadgeCheck },
       { label: 'Hesap Ayarları', href: '/settings', icon: Settings },
       { label: 'SSS', href: '/faq', icon: CircleHelp },
       { label: 'Yardım', href: '/help', icon: LifeBuoy },

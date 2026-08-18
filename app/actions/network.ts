@@ -198,3 +198,83 @@ export async function getCareerData() {
     unlockedDepth: data.unlockedDepth,
   }
 }
+
+const DEMO_LOCATIONS = [
+  { city: 'İstanbul', country: 'Türkiye', code: 'TR' },
+  { city: 'Ankara', country: 'Türkiye', code: 'TR' },
+  { city: 'İzmir', country: 'Türkiye', code: 'TR' },
+  { city: 'Antalya', country: 'Türkiye', code: 'TR' },
+  { city: 'Bursa', country: 'Türkiye', code: 'TR' },
+  { city: 'Berlin', country: 'Almanya', code: 'DE' },
+  { city: 'Köln', country: 'Almanya', code: 'DE' },
+  { city: 'Almatı', country: 'Kazakistan', code: 'KZ' },
+  { city: 'Astana', country: 'Kazakistan', code: 'KZ' },
+  { city: 'Bakü', country: 'Azerbaycan', code: 'AZ' },
+  { city: 'Tiflis', country: 'Gürcistan', code: 'GE' },
+  { city: 'Dubai', country: 'Birleşik Arap Emirlikleri', code: 'AE' },
+  { city: 'Moskova', country: 'Rusya', code: 'RU' },
+  { city: 'Taşkent', country: 'Özbekistan', code: 'UZ' },
+]
+
+function demoLocationFor(seed: string) {
+  const value = [...seed].reduce((total, character) => total + character.charCodeAt(0), 0)
+  return DEMO_LOCATIONS[value % DEMO_LOCATIONS.length]
+}
+
+function istanbulDay(value: string | Date) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value))
+}
+
+/** Compact signed-in member landing dashboard. Geographic rows are explicitly
+ * synthetic until production registration/IP location capture is enabled. */
+export async function getUserDashboardData() {
+  const [network, directs, profile] = await Promise.all([
+    getNetworkData(),
+    getDirectReferralDashboardData(),
+    getMyProfile(),
+  ])
+  if (!profile) throw new Error('Üyelik profili bulunamadı.')
+
+  const members = network.memberList
+  const latestDay = members.map((item) => istanbulDay(item.joinedAt)).sort().at(-1) ?? istanbulDay(new Date())
+  const latestMembers = members.filter((item) => istanbulDay(item.joinedAt) === latestDay)
+  const cityMap = new Map<string, { city: string; country: string; code: string; members: number; volume: number }>()
+  for (const item of members) {
+    const location = demoLocationFor(item.veloxId)
+    const key = `${location.code}-${location.city}`
+    const current = cityMap.get(key) ?? { ...location, members: 0, volume: 0 }
+    current.members += 1
+    current.volume += safeNumber(item.personalInvestment || item.personalVolume)
+    cityMap.set(key, current)
+  }
+  const cities = [...cityMap.values()].sort((a, b) => b.members - a.members || b.volume - a.volume)
+  const countryMap = new Map<string, { country: string; code: string; members: number; volume: number }>()
+  for (const city of cities) {
+    const current = countryMap.get(city.code) ?? { country: city.country, code: city.code, members: 0, volume: 0 }
+    current.members += city.members
+    current.volume += city.volume
+    countryMap.set(city.code, current)
+  }
+  const countries = [...countryMap.values()].sort((a, b) => b.members - a.members || b.volume - a.volume)
+  const growthMap = new Map<string, number>()
+  for (const item of members) {
+    const day = istanbulDay(item.joinedAt)
+    growthMap.set(day, (growthMap.get(day) ?? 0) + 1)
+  }
+  const growth = [...growthMap.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-7).map(([date, registrations]) => ({ date, registrations }))
+
+  return {
+    profile: { name: profile.name, veloxId: profile.veloxId, career: network.summary.currentCareer, balance: safeNumber(profile.balance) },
+    summary: network.summary,
+    latestDay,
+    todayRegistrations: latestMembers.length,
+    recentMembers: [...members].sort((a, b) => b.joinedAt.localeCompare(a.joinedAt)).slice(0, 8),
+    directCommission: directs.simulatedCommission,
+    networkIncome: network.demoFinance.networkCommissionAllocation,
+    cashback: network.cashbackQualification.currentTier?.cashbackAmount ?? 0,
+    cities,
+    countries,
+    growth,
+    syntheticLocations: true,
+  }
+}
