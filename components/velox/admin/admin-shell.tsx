@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -16,6 +17,8 @@ import {
   DatabaseZap,
   BarChart3,
   LogOut,
+  Menu,
+  X,
 } from 'lucide-react'
 import { VeloxLogo } from '@/components/velox/velox-logo'
 import { authClient } from '@/lib/auth-client'
@@ -43,6 +46,20 @@ export function AdminShell({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false)
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape)
+      document.body.style.overflow = ''
+    }
+  }, [mobileMenuOpen])
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -110,12 +127,79 @@ export function AdminShell({
         </div>
       </aside>
 
+      {/* Mobile admin navigation */}
+      {mobileMenuOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Menüyü kapat"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside className="relative flex h-dvh w-[82vw] max-w-72 flex-col border-r border-border bg-elevated shadow-2xl">
+            <div className="flex h-16 items-center justify-between border-b border-border px-4">
+              <div className="flex items-center gap-2">
+                <VeloxLogo size={22} />
+                <span className="rounded bg-electric/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-bright">Admin</span>
+              </div>
+              <button
+                type="button"
+                aria-label="Menüyü kapat"
+                onClick={() => setMobileMenuOpen(false)}
+                className="grid size-10 place-items-center rounded-lg border border-border text-muted-foreground"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto px-3 py-4">
+              <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Operasyon</div>
+              <ul className="space-y-1">
+                {adminNav.map((item) => {
+                  const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href)
+                  const Icon = item.icon
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={cn(
+                          'flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          active ? 'bg-electric/10 font-medium text-bright' : 'text-muted-foreground hover:bg-surface hover:text-foreground',
+                        )}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </nav>
+            <div className="border-t border-border p-3">
+              <Link href="/arbitraj" onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground">
+                <ArrowLeft className="size-4 shrink-0" />
+                Yatırımcı paneline dön
+              </Link>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
       <div className="flex min-h-dvh flex-1 flex-col lg:pl-60">
         {/* Admin top bar */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:px-6">
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Yönetim menüsünü aç"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen(true)}
+              className="grid size-10 place-items-center rounded-lg border border-border text-foreground lg:hidden"
+            >
+              <Menu className="size-5" />
+            </button>
             <ShieldCheck className="size-4 text-primary" />
-            <span className="text-sm font-medium">VELOX Operasyon Konsolu</span>
+            <span className="text-sm font-medium max-[390px]:hidden">VELOX Operasyon Konsolu</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs text-muted-foreground sm:inline">{adminName}</span>
