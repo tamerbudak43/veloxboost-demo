@@ -11,6 +11,10 @@ export const DEMO_GROWTH_DAYS = 7
 export const DEMO_STARTING_REGISTRATIONS = 10
 export const DEMO_DAILY_GROWTH_RATE = 30
 
+// The second day is intentionally accelerated for the 18 Aug 2026 demo:
+// 10 members on day one, 40 members today, then approximately 30% daily growth.
+const DEMO_NETWORK_TARGETS = [10, 40, 52, 68, 88, 115, 150] as const
+
 export type DemoRegistrantType = 'investor' | 'leader' | 'starter'
 
 export type DemoGrowthDay = {
@@ -69,7 +73,8 @@ const FIRST_NAMES = ['Deniz', 'Ece', 'Mert', 'Selin', 'Barış', 'İrem', 'Kaan'
 const LAST_NAMES = ['Yılmaz', 'Kaya', 'Demir', 'Şahin', 'Aydın', 'Çelik', 'Öztürk', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin']
 
 function targetNetworkForDay(day: number) {
-  return Math.round(DEMO_STARTING_REGISTRATIONS * Math.pow(1 + DEMO_DAILY_GROWTH_RATE / 100, day - 1))
+  return DEMO_NETWORK_TARGETS[day - 1]
+    ?? Math.round(DEMO_NETWORK_TARGETS[DEMO_NETWORK_TARGETS.length - 1] * Math.pow(1 + DEMO_DAILY_GROWTH_RATE / 100, day - DEMO_NETWORK_TARGETS.length))
 }
 
 function cashbackFor(volume: number) {
@@ -127,8 +132,8 @@ export function buildDemoGrowthSimulation(root: {
   let starterCount = 0
 
   for (let day = 1; day <= DEMO_GROWTH_DAYS; day++) {
-    // The total network, rather than the daily intake, grows about 30% from
-    // one snapshot to the next: 10 → 13 → 17 → 22 → 29 → 37 → 48.
+    // Day two is accelerated to 40 total members; later snapshots continue
+    // at approximately 30% growth: 10 → 40 → 52 → 68 → 88 → 115 → 150.
     const registrations = Math.max(0, targetNetworkForDay(day) - (members.length - 1))
     for (let slot = 0; slot < registrations; slot++) {
       const type = categoryFor(serial - 1)
@@ -137,10 +142,11 @@ export function buildDemoGrowthSimulation(root: {
         : type === 'leader'
           ? 750 + Math.round(random() * 450)
           : 100 + Math.round(random() * 900)
-      // Strict binary matrix placement: A has B/C, then D/E/F/G, then eight
-      // places. The parent index follows the binary-heap rule so no member
-      // can ever receive more than two matrix children.
-      const parentIndex = Math.floor((serial - 1) / 2)
+      const parentIndex = members.length === 1
+        ? 0
+        // New registrations appear under earlier registrations only. The
+        // first few are direct referrals, later ones spread into the network.
+        : (serial <= 10 ? 0 : Math.floor(random() * Math.max(1, members.length - 1)) + 1)
       const sponsor = members[parentIndex] ?? members[0]
       const depth = Math.min(33, sponsor.depth + 1)
       const id = `demo-sim-${day}-${serial}`
