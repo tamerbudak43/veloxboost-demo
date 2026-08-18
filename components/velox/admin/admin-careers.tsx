@@ -60,6 +60,7 @@ const REQ_FIELDS: { key: string; label: string }[] = [
 function CareerRow({ c }: { c: AdminCareer }) {
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
+  const [showOptionalRequirements, setShowOptionalRequirements] = useState(false)
   const [depth, setDepth] = useState(c.unlockedDepth)
   const [limit, setLimit] = useState(c.dailyWithdrawalLimit)
   const [enabled, setEnabled] = useState(c.enabled)
@@ -91,6 +92,9 @@ function CareerRow({ c }: { c: AdminCareer }) {
       setTimeout(() => setSaved(false), 1800)
     })
   }
+
+  const activeRequirementFields = REQ_FIELDS.filter((field) => reqs[field.key] > 0)
+  const optionalRequirementFields = REQ_FIELDS.filter((field) => reqs[field.key] <= 0)
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -139,7 +143,7 @@ function CareerRow({ c }: { c: AdminCareer }) {
 
       <Eyebrow>Yeterlilik gereksinimleri</Eyebrow>
       <div className="mt-2 grid gap-3 sm:grid-cols-3">
-        {REQ_FIELDS.map((f) => (
+        {activeRequirementFields.map((f) => (
           <Field key={f.key} label={f.label}>
             <input
               type="number"
@@ -151,6 +155,37 @@ function CareerRow({ c }: { c: AdminCareer }) {
           </Field>
         ))}
       </div>
+
+      {activeRequirementFields.length === 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">Bu kariyer için ek yeterlilik şartı tanımlı değil.</p>
+      ) : null}
+
+      {optionalRequirementFields.length > 0 ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowOptionalRequirements((visible) => !visible)}
+            className="text-xs font-medium text-muted-foreground transition-colors hover:text-electric"
+          >
+            {showOptionalRequirements ? 'Opsiyonel / sıfır şartları gizle' : `Opsiyonel / sıfır şartları yönet (${optionalRequirementFields.length})`}
+          </button>
+          {showOptionalRequirements ? (
+            <div className="mt-2 grid gap-3 rounded-md border border-dashed border-border p-3 sm:grid-cols-3">
+              {optionalRequirementFields.map((f) => (
+                <Field key={f.key} label={`${f.label} (devre dışı)`}>
+                  <input
+                    type="number"
+                    min={0}
+                    value={reqs[f.key]}
+                    onChange={(e) => setReqs((s) => ({ ...s, [f.key]: Number(e.target.value) }))}
+                    className="velox-input"
+                  />
+                </Field>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 flex items-center justify-end gap-3">
         <span className="text-xs text-muted-foreground">
