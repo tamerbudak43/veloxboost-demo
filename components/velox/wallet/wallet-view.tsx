@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -156,6 +157,35 @@ function DepositTab({
             copied={copiedField === 'address'}
             onCopy={() => copy('address', selectedNetwork?.depositAddress ?? null)}
           />
+
+          {selectedNetwork?.configured && selectedNetwork.depositAddress ? (
+            <div className="rounded-lg border border-cyan/30 bg-cyan/5 p-4">
+              <div className="flex flex-col items-center gap-4 sm:flex-row">
+                <div className="shrink-0 rounded-xl bg-white p-2.5 shadow-[0_0_24px_rgba(34,211,238,0.12)]">
+                  <QRCodeSVG
+                    value={selectedNetwork.depositAddress}
+                    size={148}
+                    level="M"
+                    marginSize={4}
+                    title={`${selectedNetwork.label} — USDT Yatırma Adresi`}
+                    className="h-36 w-36"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 text-center sm:text-left">
+                  <p className="text-sm font-semibold text-foreground">QR ile yatır</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Cüzdan uygulamanızla QR kodunu tarayın.
+                  </p>
+                  <span className="mt-3 inline-flex rounded-full border border-cyan/40 bg-cyan/10 px-2.5 py-1 font-mono text-[11px] font-semibold text-light-cyan">
+                    USDT · {selectedNetwork.id}
+                  </span>
+                  <p className="mt-2 text-[11px] leading-4 text-amber-200">
+                    Yalnızca seçili ağ üzerinden USDT gönderin.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {selectedNetwork?.memoRequired ? (
             <CopyField
