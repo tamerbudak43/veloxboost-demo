@@ -438,6 +438,133 @@ export async function seedPhaseOneDemoSimulation() {
   return { created: demoMembers.length, day: simulation.currentDay }
 }
 
+/**
+ * Appends the second-day intake without clearing the first 13 demo records.
+ * The first 40 deterministic graph nodes are used, so current entries retain
+ * their IDs, sponsors and ledger history while only the missing members arrive.
+ */
+export async function appendPhaseOneDemoMembersToForty() {
+  const admin = await requireAdmin()
+  await ensureInitialAdminConfig()
+  const { members: graph, simulation } = buildDemoGrowthSimulation({
+    userId: admin.userId,
+    name: admin.name,
+    veloxId: admin.veloxId,
+    career: admin.career,
+  })
+  const targetMembers = graph.filter((item) => item.id.startsWith(DEMO_PREFIX)).slice(0, 40)
+
+  const result = await db.transaction(async (tx) => {
+    const existing = await tx.select().from(member).where(like(member.userId, `${DEMO_PREFIX}%`))
+    const existingIds = new Set(existing.map((item) => item.userId))
+    const additions = targetMembers.filter((item) => !existingIds.has(item.id))
+    if (additions.length === 0) return { added: 0, total: existing.length }
+
+    await tx.insert(member).values(additions.map((item, index) => ({
+      userId: item.id,
+      name: item.name,
+      email: `demo+${item.id}@velox.invalid`,
+      veloxId: item.veloxId,
+      referralCode: `DEMO${String(existing.length + index + 1).padStart(4, '0')}`,
+      sponsorId: item.sponsorId,
+      role: 'member',
+      status: item.status,
+      career: item.career,
+      personalVolume: String(item.personalInvestment),
+      teamVolume: '0',
+      balance: '0',
+      directCount: 0,
+      createdAt: new Date(item.joinedAt),
+    })))
+
+    const byId = new Map(graph.map((item) => [item.id, item]))
+    const closureRows: { ancestorUserId: string; descendantUserId: string; depth: number }[] = []
+    for (const item of additions) {
+      let ancestorId = item.sponsorId
+      let depth = 1
+      while (ancestorId && depth <= 33) {
+        closureRows.push({ ancestorUserId: ancestorId, descendantUserId: item.id, depth })
+        ancestorId = byId.get(ancestorId)?.sponsorId ?? null
+        depth++
+      }
+    }
+    if (closureRows.length) await tx.insert(networkClosure).values(closureRows)
+
+    await tx.insert(investmentReceipt).values(additions.map((item) => ({
+      userId: item.id,
+      receiptNumber: `DEMO-${item.veloxId}`,
+      amount: String(item.personalInvestment),
+      asset: 'USDT',
+      network: 'DEMO',
+      receivingAddress: 'DEMO-NO-WALLET',
+      transactionHash: `DEMO-${item.id.toUpperCase()}`,
+      status: 'confirmed',
+      issuedAt: new Date(item.joinedAt),
+      confirmedAt: new Date(item.joinedAt),
+    })))
+
+    const [commissionRows, careerRows] = await Promise.all([tx.select().from(commissionLevel), tx.select().from(career)])
+    const commissionByDepth = new Map(commissionRows.filter((row) => row.enabled).map((row) => [row.level, row]))
+    const careerOrder = new Map(careerRows.map((row) => [row.code, row.displayOrder]))
+    const occurredAt = new Date()
+    const day = Math.max(2, simulation.currentDay)
+    const credits = new Map<string, number>()
+    const addCredit = (userId: string, amount: number) => credits.set(userId, Number(((credits.get(userId) ?? 0) + amount).toFixed(2)))
+    const ledgerRows = additions.map((item) => ({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_investment', amount: String(item.personalInvestment), status: 'confirmed_demo', reference: `DEMO-${item.veloxId}-INV`, occurredAt }))
+
+    for (const item of additions) {
+      const sponsor = item.sponsorId ? byId.get(item.sponsorId) : null
+      if (sponsor) {
+        const referral = Number((item.personalInvestment * DEMO_DIRECT_REFERRAL_RATE).toFixed(2))
+        ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: sponsor.id, userName: sponsor.name, veloxId: sponsor.veloxId, entryType: 'demo_referral_commission', amount: String(referral), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-REF6`, occurredAt })
+        addCredit(sponsor.id, referral)
+      }
+
+      const accrual = Number((item.personalInvestment * (DEMO_DAILY_DISTRIBUTION_AVERAGE / 100)).toFixed(2))
+      ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: item.id, userName: item.name, veloxId: item.veloxId, entryType: 'demo_accrual', amount: String(accrual), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-ACC`, occurredAt })
+      addCredit(item.id, accrual)
+
+      let ancestorId = item.sponsorId
+      let depth = 1
+      while (ancestorId && depth <= 33) {
+        const recipient = byId.get(ancestorId)
+        const level = commissionByDepth.get(depth)
+        if (!recipient || !level) break
+        const requiredCareerOrder = careerOrder.get(level.requiredCareerCode) ?? 0
+        const recipientCareerOrder = careerOrder.get(recipient.career) ?? 0
+        if (recipientCareerOrder >= requiredCareerOrder) {
+          const networkCommission = Number((accrual * (safeNumber(level.percentage) / 100)).toFixed(2))
+          if (networkCommission > 0) {
+            ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: recipient.id, userName: recipient.name, veloxId: recipient.veloxId, entryType: 'demo_network_commission', amount: String(networkCommission), status: 'accrued_demo', reference: `DEMO-${item.veloxId}-D${day}-L${depth}-NET`, occurredAt })
+            addCredit(recipient.id, networkCommission)
+          }
+        }
+        ancestorId = recipient.sponsorId
+        depth++
+      }
+    }
+    for (const [userId, payout] of credits) {
+      const recipient = byId.get(userId)
+      if (!recipient || payout < 25) continue
+      ledgerRows.push({ runKey: DEMO_RUN_KEY, userId: recipient.id, userName: recipient.name, veloxId: recipient.veloxId, entryType: 'demo_auto_withdrawal', amount: String(-payout), status: 'auto_withdrawn_demo', reference: `DEMO-${recipient.veloxId}-D${day}-WDL`, occurredAt })
+    }
+    await tx.insert(demoLedgerEntry).values(ledgerRows)
+
+    const directCounts = new Map<string, number>()
+    for (const item of targetMembers) if (item.sponsorId) directCounts.set(item.sponsorId, (directCounts.get(item.sponsorId) ?? 0) + 1)
+    for (const [userId, directCount] of directCounts) await tx.update(member).set({ directCount }).where(eq(member.userId, userId))
+
+    return { added: additions.length, total: existing.length + additions.length }
+  })
+
+  revalidatePath('/partners')
+  revalidatePath('/admin')
+  revalidatePath('/admin/network')
+  revalidatePath('/admin/demo-simulation')
+  revalidatePath('/admin/reports')
+  return result
+}
+
 export async function loadPhaseOneDemoSimulation() {
   await requireAdmin()
   const [members, ledger] = await Promise.all([

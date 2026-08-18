@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { DatabaseZap, Play, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react'
-import { resetPhaseOneDemoBaseline, seedPhaseOneDemoSimulation } from '@/app/actions/admin'
+import { DatabaseZap, Play, Plus, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react'
+import { appendPhaseOneDemoMembersToForty, resetPhaseOneDemoBaseline, seedPhaseOneDemoSimulation } from '@/app/actions/admin'
 import { Panel, PanelHeader, StatTile, StatusPill } from '@/components/velox/primitives'
 import { formatDateTime, formatNumber, formatUSDT, safeArray, safeNumber } from '@/lib/format'
 
@@ -49,6 +49,17 @@ export function AdminDemoSimulation({ members, ledger }: { members: DemoMember[]
     })
   }
 
+  function appendToForty() {
+    startTransition(async () => {
+      try {
+        const result = await appendPhaseOneDemoMembersToForty()
+        setNotice(result.added ? `${result.added} yeni demo üye eklendi. Mevcut kayıtlar korunarak toplam ağ ${result.total} üyeye ulaştı. Sayfayı yenileyin.` : `Demo ağ zaten ${result.total} üyede; yeni kayıt eklenmedi.`)
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Yeni demo kayıtları eklenemedi.')
+      }
+    })
+  }
+
   function reset() {
     startTransition(async () => {
       try {
@@ -62,7 +73,7 @@ export function AdminDemoSimulation({ members, ledger }: { members: DemoMember[]
   }
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight"><DatabaseZap className="size-6 text-electric" /> Faz 1 Demo Simülasyonu</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Bu alan sentetik üyeleri ve işlem defterini kalıcı olarak test eder. Hiçbir satır kullanıcı hesabı, cüzdan, zincir işlemi veya ödeme talimatı değildir.</p></div><div className="flex flex-wrap gap-2"><Link href="/partners" className="inline-flex h-10 items-center rounded-md border border-cyan/45 px-4 text-sm font-semibold text-cyan hover:bg-cyan/10">Ana panel / ağ önizlemesi</Link><Link href="/admin/reports" className="inline-flex h-10 items-center rounded-md border border-cyan/45 px-4 text-sm font-semibold text-cyan hover:bg-cyan/10">Gün sonu raporları</Link><button type="button" onClick={seed} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-md velox-gradient px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60">{busy ? <RefreshCw className="size-4 animate-spin" /> : <Play className="size-4" />}{rows.length ? 'Test verisini yeniden kur' : '7 günlük test verisini kur'}</button></div></div>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight"><DatabaseZap className="size-6 text-electric" /> Faz 1 Demo Simülasyonu</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Bu alan sentetik üyeleri ve işlem defterini kalıcı olarak test eder. Hiçbir satır kullanıcı hesabı, cüzdan, zincir işlemi veya ödeme talimatı değildir.</p></div><div className="flex flex-wrap gap-2"><Link href="/partners" className="inline-flex h-10 items-center rounded-md border border-cyan/45 px-4 text-sm font-semibold text-cyan hover:bg-cyan/10">Ana panel / ağ önizlemesi</Link><Link href="/admin/reports" className="inline-flex h-10 items-center rounded-md border border-cyan/45 px-4 text-sm font-semibold text-cyan hover:bg-cyan/10">Gün sonu raporları</Link>{rows.length > 0 && rows.length < 40 && <button type="button" onClick={appendToForty} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-md border border-cyan/55 bg-cyan/10 px-4 text-sm font-semibold text-cyan hover:bg-cyan/20 disabled:opacity-60">{busy ? <RefreshCw className="size-4 animate-spin" /> : <Plus className="size-4" />}Bugün +{40 - rows.length} kişi ekle</button>}<button type="button" onClick={seed} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-md velox-gradient px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60">{busy ? <RefreshCw className="size-4 animate-spin" /> : <Play className="size-4" />}{rows.length ? 'Test verisini yeniden kur' : '7 günlük test verisini kur'}</button></div></div>
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"><ShieldAlert className="mr-2 inline size-4" />Tüm kayıtlar `DEMO-` / `SIM` tanımlayıcılarıyla ayrılır. Otomatik çekim satırı yalnızca test durumudur; blockchain, ödeme veya cüzdan aktarımı yapılmaz.</div>
     {notice && <div className="rounded-md border border-cyan/30 bg-cyan/10 px-4 py-3 text-sm text-cyan">{notice}</div>}
     <Panel className="border-destructive/35 bg-destructive/5"><PanelHeader title="Faz 1 başlangıç sıfırlaması" right={<StatusPill tone="danger">Geri alınamaz</StatusPill>} /><div className="flex flex-wrap items-end gap-3 p-4"><label className="min-w-56 flex-1 text-xs text-muted-foreground">Onay için <span className="font-mono text-foreground">SIFIRLA</span> yaz<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder="SIFIRLA" className="velox-input mt-1.5 h-10" /></label><button type="button" onClick={reset} disabled={busy || confirmation.trim().toUpperCase() !== 'SIFIRLA'} className="inline-flex h-10 items-center gap-2 rounded-md border border-destructive/50 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"><Trash2 className="size-4" />Sadece admin kalsın</button></div><p className="px-4 pb-4 text-xs text-muted-foreground">Açık oturumdaki admin hesabı korunur. Diğer üyeler, giriş hesapları, ağ kayıtları, makbuzlar, tahakkuklar ve çekimler silinir; admin değerleri sıfıra döner.</p></Panel>
