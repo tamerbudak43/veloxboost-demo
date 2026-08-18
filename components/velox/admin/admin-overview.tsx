@@ -134,7 +134,7 @@ function DemoReportOverview({ daily, cities, countries, endingCash }: { daily: D
         </div>
       </div>
 
-      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 2xl:grid-cols-8">
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Kasa açılış</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(current?.openingCash ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Bugün giriş</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(current?.deposits ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Yatırım kâr dağıtımı</p><p className="mt-1 font-mono text-lg font-semibold text-light-cyan">{formatUSDT(current?.memberAccrual ?? 0, 2)}</p></div>
@@ -143,7 +143,20 @@ function DemoReportOverview({ daily, cities, countries, endingCash }: { daily: D
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cashback</p><p className="mt-1 font-mono text-lg font-semibold text-emerald-300">{formatUSDT(current?.cashback ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Otomatik çekim</p><p className="mt-1 font-mono text-lg font-semibold text-electric">{formatUSDT(current?.automaticPayments ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net gün K/Z</p><p className="mt-1 font-mono text-lg font-semibold text-light-cyan">{formatUSDT(current?.profitLoss ?? 0, 2)}</p></div>
-        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Kasa devir</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(endingCash, 2)}</p></div>
+      </div>
+
+      <div className="border-t border-border/60 px-4 pb-4">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-cyan/30 bg-gradient-to-r from-[#0b1f36] via-[#0a1a2d] to-[#091522] px-5 py-4 shadow-[0_0_28px_rgba(34,211,238,.08)]">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-cyan/80">Kasa devir · gün sonu</p>
+            <p className="mt-1 font-mono text-2xl font-semibold text-foreground">{formatUSDT(endingCash, 2)}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground sm:flex sm:gap-6">
+            <span>Giriş: <b className="font-mono text-cyan">{formatUSDT(current?.deposits ?? 0, 2)}</b></span>
+            <span>Dağıtım: <b className="font-mono text-light-cyan">{formatUSDT((current?.memberAccrual ?? 0) + (current?.referralExpense ?? 0) + (current?.networkIncome ?? 0) + (current?.cashback ?? 0), 2)}</b></span>
+            <span>Çekim: <b className="font-mono text-electric">{formatUSDT(current?.automaticPayments ?? 0, 2)}</b></span>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-[1.2fr_.8fr]">
