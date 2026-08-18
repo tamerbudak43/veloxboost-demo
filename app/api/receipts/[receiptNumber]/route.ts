@@ -1,16 +1,16 @@
 import { and, eq } from 'drizzle-orm'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { investmentReceipt, member } from '@/lib/db/schema'
 import { renderInvestmentReceipt } from '@/lib/pdf/investment-receipt'
-import { exportLanguageFromRequest } from '@/lib/i18n/export-language'
+import { resolvePdfLanguage } from '@/lib/pdf/pdf-i18n'
 
 export const runtime = 'nodejs'
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ receiptNumber: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -38,8 +38,8 @@ export async function GET(
 
   if (!record) return new NextResponse('Belge bulunamadı.', { status: 404 })
   if (record.status !== 'confirmed') return new NextResponse('Belge, ağ doğrulamasından sonra indirilebilir.', { status: 409 })
+  const language = resolvePdfLanguage((await cookies()).get('velox-language')?.value)
 
-  const language = exportLanguageFromRequest(request)
   const pdf = await renderInvestmentReceipt({
     ...record,
     issuedAt: record.issuedAt,
@@ -49,7 +49,7 @@ export async function GET(
   return new NextResponse(pdf, {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${record.receiptNumber}.pdf"`,
+      'Content-Disposition': `attachment; filename="${record.receiptNumber}-${language}.pdf"`,
       'Cache-Control': 'private, no-store',
     },
   })

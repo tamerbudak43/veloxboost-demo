@@ -24,6 +24,37 @@ const rows: Row[] = [
   ['Otomatik Çekim Kuralı','Automatic Withdrawal Rule','Правило автовывода','Правило автовиведення','Regla de retiro automático','Regra de saque automático','Regel für automatische Auszahlung','Regola di prelievo automatico','Règle de retrait automatique','Автоматты шығару ережесі','Правило за автоматично теглене','Aturan penarikan otomatis','قاعدة السحب التلقائي','自动提现规则','Automatikus kifizetési szabály','قانون برداشت خودکار'],
   ['Kuralı kaydet','Save rule','Сохранить правило','Зберегти правило','Guardar regla','Salvar regra','Regel speichern','Salva regola','Enregistrer la règle','Ережені сақтау','Запази правилото','Simpan aturan','حفظ القاعدة','保存规则','Szabály mentése','ذخیره قانون'],
   ['İşlem geçmişi','Transaction history','История операций','Історія операцій','Historial de operaciones','Histórico de transações','Transaktionsverlauf','Cronologia operazioni','Historique des opérations','Операциялар тарихы','История на операциите','Riwayat transaksi','سجل المعاملات','交易历史','Tranzakciós előzmények','تاریخچه تراکنش‌ها'],
+  ['Ticaret bakiyesi / Arbitraj','Trading balance / Arbitrage','Торговый баланс / Арбитраж','Торговий баланс / Арбітраж','Saldo de trading / Arbitraje','Saldo de negociação / Arbitragem','Handelsguthaben / Arbitrage','Saldo di trading / Arbitraggio','Solde de trading / Arbitrage','Сауда балансы / Арбитраж','Търговски баланс / Арбитраж','Saldo perdagangan / Arbitrase','رصيد التداول / المراجحة','交易余额 / 套利','Kereskedési egyenleg / Arbitrázs','موجودی معامله / آربیتراژ'],
+  ['Gelir bakiyesi','Income balance','Доходный баланс','Баланс доходу','Saldo de ingresos','Saldo de renda','Einkommensguthaben','Saldo redditi','Solde de revenus','Кіріс балансы','Доходен баланс','Saldo pendapatan','رصيد الدخل','收益余额','Jövedelemegyenleg','موجودی درآمد'],
+  ['Faturalar','Invoices','Счета','Рахунки','Facturas','Faturas','Rechnungen','Fatture','Factures','Шоттар','Фактури','Faktur','الفواتير','发票','Számlák','فاکتورها'],
+  ['Bilgi','Information','Информация','Інформація','Información','Informação','Information','Informazioni','Informations','Ақпарат','Информация','Informasi','معلومات','信息','Információ','اطلاعات'],
+  ['Aşama bitişine:','Stage ends in:','До конца этапа:','До завершення етапу:','Fin de la etapa en:','A etapa termina em:','Phase endet in:','Fine fase tra:','Fin de l’étape dans :','Кезең аяқталуына:','До края на етапа:','Tahap berakhir dalam:','تنتهي المرحلة خلال:','阶段结束倒计时：','A szakasz vége:','پایان مرحله تا:'],
+  ['Hesaplanıyor...','Calculating...','Вычисляется...','Обчислення...','Calculando...','Calculando...','Wird berechnet...','Calcolo...','Calcul en cours...','Есептелуде...','Изчислява се...','Menghitung...','جارٍ الحساب...','计算中...','Számítás...','در حال محاسبه...'],
+  ['Canlı simülasyon','Live simulation','Симуляция в реальном времени','Симуляція в реальному часі','Simulación en vivo','Simulação ao vivo','Live-Simulation','Simulazione live','Simulation en direct','Тікелей симуляция','Симулация на живо','Simulasi langsung','محاكاة مباشرة','实时模拟','Élő szimuláció','شبیه‌سازی زنده'],
+  ['Güncelleme','Update','Обновление','Оновлення','Actualización','Atualização','Aktualisierung','Aggiornamento','Mise à jour','Жаңарту','Актуализация','Pembaruan','تحديث','更新','Frissítés','به‌روزرسانی'],
+  ['Satın Al','Buy','Купить','Купити','Comprar','Comprar','Kaufen','Acquista','Acheter','Сатып алу','Купи','Beli','شراء','买入','Vásárlás','خرید'],
+  ['Satın al','Buy','Купить','Купити','Comprar','Comprar','Kaufen','Acquista','Acheter','Сатып алу','Купи','Beli','شراء','买入','Vásárlás','خرید'],
+  ['Sat','Sell','Продать','Продати','Vender','Vender','Verkaufen','Vendi','Vendre','Сату','Продай','Jual','بيع','卖出','Eladás','فروش'],
+  ['Varlığım','My asset','Мой актив','Мій актив','Mi activo','Meu ativo','Mein Vermögen','Il mio asset','Mon actif','Менің активім','Моят актив','Aset saya','أصلي','我的资产','Saját eszközöm','دارایی من'],
+  ['Toplam havuz','Total pool','Общий пул','Загальний пул','Pool total','Pool total','Gesamtpool','Pool totale','Pool total','Жалпы пул','Общ пул','Total pool','إجمالي المجمع','资金池总额','Teljes pool','کل استخر'],
+  ['Canlı yayın (VELOX)','Live feed (VELOX)','Прямая трансляция (VELOX)','Пряма трансляція (VELOX)','Transmisión en vivo (VELOX)','Transmissão ao vivo (VELOX)','Live-Übertragung (VELOX)','Trasmissione in diretta (VELOX)','Flux en direct (VELOX)','Тікелей эфир (VELOX)','Предаване на живо (VELOX)','Siaran langsung (VELOX)','بث مباشر (VELOX)','实时行情 (VELOX)','Élő közvetítés (VELOX)','پخش زنده (VELOX)'],
+  ['Görüntüle →','View →','Открыть →','Відкрити →','Ver →','Ver →','Anzeigen →','Visualizza →','Afficher →','Көру →','Преглед →','Lihat →','عرض →','查看 →','Megtekintés →','مشاهده →'],
+  ['Görüntüle','View','Открыть','Відкрити','Ver','Ver','Anzeigen','Visualizza','Afficher','Көру','Преглед','Lihat','عرض','查看','Megtekintés','مشاهده'],
+  ['Best Offer','Best Offer','Лучшее предложение','Найкраща пропозиція','Mejor oferta','Melhor oferta','Bestes Angebot','Migliore offerta','Meilleure offre','Үздік ұсыныс','Най-добра оферта','Penawaran terbaik','أفضل عرض','最佳报价','Legjobb ajánlat','بهترین پیشنهاد'],
+  ['ETH ALIŞ FİYATI','ETH BUY PRICE','ЦЕНА ПОКУПКИ ETH','ЦІНА КУПІВЛІ ETH','PRECIO DE COMPRA ETH','PREÇO DE COMPRA ETH','ETH-KAUFPREIS','PREZZO DI ACQUISTO ETH','PRIX D’ACHAT ETH','ETH САТЫП АЛУ БАҒАСЫ','ЦЕНА ЗА ПОКУПКА ETH','HARGA BELI ETH','سعر شراء ETH','ETH 买入价','ETH VÉTELI ÁR','قیمت خرید ETH'],
+  ['ETH SATIŞ FİYATI','ETH SELL PRICE','ЦЕНА ПРОДАЖИ ETH','ЦІНА ПРОДАЖУ ETH','PRECIO DE VENTA ETH','PREÇO DE VENDA ETH','ETH-VERKAUFSPREIS','PREZZO DI VENDITA ETH','PRIX DE VENTE ETH','ETH САТУ БАҒАСЫ','ЦЕНА ЗА ПРОДАЖБА ETH','HARGA JUAL ETH','سعر بيع ETH','ETH 卖出价','ETH ELADÁSI ÁR','قیمت فروش ETH'],
+  ['ETH HACMİ','ETH VOLUME','ОБЪЁМ ETH','ОБСЯГ ETH','VOLUMEN ETH','VOLUME ETH','ETH-VOLUMEN','VOLUME ETH','VOLUME ETH','ETH КӨЛЕМІ','ОБЕМ ETH','VOLUME ETH','حجم ETH','ETH 交易量','ETH VOLUMEN','حجم ETH'],
+  ['Aktif İşlem','Active transaction','Активная операция','Активна операція','Operación activa','Operação ativa','Aktive Transaktion','Operazione attiva','Transaction active','Белсенді операция','Активна операция','Transaksi aktif','معاملة نشطة','活跃交易','Aktív tranzakció','تراکنش فعال'],
+  ['Simülasyonda eşleştiriliyor','Matching in simulation','Сопоставление в симуляции','Зіставлення в симуляції','Emparejando en la simulación','Correspondência na simulação','Abgleich in der Simulation','Abbinamento nella simulazione','Appariement dans la simulation','Симуляцияда сәйкестендірілуде','Съпоставяне в симулацията','Dicocokkan dalam simulasi','تتم المطابقة في المحاكاة','模拟中匹配','Párosítás a szimulációban','تطبیق در شبیه‌سازی'],
+  ['Toplam hacim ETH','Total ETH volume','Общий объём ETH','Загальний обсяг ETH','Volumen total de ETH','Volume total de ETH','Gesamtes ETH-Volumen','Volume ETH totale','Volume ETH total','Жалпы ETH көлемі','Общ обем ETH','Total volume ETH','إجمالي حجم ETH','ETH 总交易量','Teljes ETH-volumen','حجم کل ETH'],
+  ['Teklif bekleniyor...','Waiting for offer...','Ожидание предложения...','Очікування пропозиції...','Esperando oferta...','Aguardando oferta...','Angebot wird erwartet...','In attesa di offerta...','En attente d’une offre...','Ұсыныс күтілуде...','Изчаква се оферта...','Menunggu penawaran...','بانتظار العرض...','等待报价...','Ajánlatra vár...','در انتظار پیشنهاد...'],
+  ['Tahakkuklar','Accruals','Начисления','Нарахування','Devengos','Provisões','Gutschriften','Ratei','Cumuls','Есептеулер','Начисления','Akrual','المستحقات','应计','Elhatárolások','مطالبات'],
+  ['Operasyonlar','Operations','Операции','Операції','Operaciones','Operações','Vorgänge','Operazioni','Opérations','Операциялар','Операции','Operasi','العمليات','操作','Műveletek','عملیات'],
+  ['Tarih/Saat','Date/Time','Дата/Время','Дата/Час','Fecha/Hora','Data/Hora','Datum/Uhrzeit','Data/Ora','Date/Heure','Күн/Уақыт','Дата/Час','Tanggal/Waktu','التاريخ/الوقت','日期/时间','Dátum/Idő','تاریخ/زمان'],
+  ['Toplam Spread','Total Spread','Общий спред','Загальний спред','Spread total','Spread total','Gesamt-Spread','Spread totale','Spread total','Жалпы спред','Общ спред','Total spread','إجمالي الفارق','总点差','Teljes spread','اسپرد کل'],
+  ['Net Spread','Net Spread','Чистый спред','Чистий спред','Spread neto','Spread líquido','Netto-Spread','Spread netto','Spread net','Таза спред','Нетен спред','Spread bersih','صافي الفارق','净点差','Nettó spread','اسپرد خالص'],
+  ['piyasa demosunu aç','open market demo','открыть демо рынка','відкрити демо ринку','abrir demo del mercado','abrir demo de mercado','Marktdemo öffnen','apri la demo di mercato','ouvrir la démo du marché','нарық демосын ашу','отвори демо на пазара','buka demo pasar','فتح عرض السوق التجريبي','打开市场演示','piaci demó megnyitása','باز کردن دموی بازار'],
+  ['Canlı piyasa simülasyonu','Live market simulation','Симуляция рынка в реальном времени','Симуляція ринку в реальному часі','Simulación del mercado en vivo','Simulação de mercado ao vivo','Live-Marktsimulation','Simulazione del mercato live','Simulation du marché en direct','Нарықтың тікелей симуляциясы','Пазарна симулация на живо','Simulasi pasar langsung','محاكاة السوق المباشرة','实时市场模拟','Élő piaci szimuláció','شبیه‌سازی زنده بازار'],
   ['Sözleşmeler ve Faturalar','Contracts and Invoices','Контракты и счета','Контракти та рахунки','Contratos y facturas','Contratos e faturas','Verträge und Rechnungen','Contratti e fatture','Contrats et factures','Келісімшарттар мен шоттар','Договори и фактури','Kontrak dan faktur','العقود والفواتير','合同与发票','Szerződések és számlák','قراردادها و فاکتورها'],
   ['Sözleşmelerim','My Contracts','Мои контракты','Мої контракти','Mis contratos','Meus contratos','Meine Verträge','I miei contratti','Mes contrats','Менің келісімшарттарым','Моите договори','Kontrak saya','عقودي','我的合同','Szerződéseim','قراردادهای من'],
   ['Sözleşme listesi','Contract list','Список контрактов','Список контрактів','Lista de contratos','Lista de contratos','Vertragsliste','Elenco contratti','Liste des contrats','Келісімшарттар тізімі','Списък с договори','Daftar kontrak','قائمة العقود','合同列表','Szerződéslista','فهرست قراردادها'],
@@ -83,6 +114,11 @@ const dictionaries = Object.fromEntries(targetLanguages.map((language, languageI
 ])) as Record<TargetLanguage, Record<string, string>>
 
 const orderedSources = rows.map((row) => row[0]).sort((a, b) => b.length - a.length)
+const escapedSources = orderedSources.map((source) => source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+const phrasePattern = new RegExp(
+  `(^|[^\\p{L}\\p{N}_])(${escapedSources.join('|')})(?=$|[^\\p{L}\\p{N}_])`,
+  'gu',
+)
 
 export function translateUiText(value: string, language: LanguageCode): string {
   if (language === 'tr' || !value.trim()) return value
@@ -93,14 +129,16 @@ export function translateUiText(value: string, language: LanguageCode): string {
   const exact = dictionary[source]
   if (exact) return `${leading}${exact}${trailing}`
 
-  let translated = source
-  for (const term of orderedSources) {
-    if (translated.includes(term)) translated = translated.split(term).join(dictionary[term])
-  }
+  phrasePattern.lastIndex = 0
+  const translated = source.replace(
+    phrasePattern,
+    (_match, prefix: string, term: string) => `${prefix}${dictionary[term] ?? term}`,
+  )
   return translated === source ? value : `${leading}${translated}${trailing}`
 }
 
 const translatedAttributes = ['placeholder', 'aria-label', 'title'] as const
+const excludedSelector = '[data-no-auto-translate],script,style,code,pre'
 
 export function AutoTranslate({ children }: { children: ReactNode }) {
   const { language } = useLanguage()
@@ -112,7 +150,13 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
     const root = rootRef.current
     if (!root) return
 
+    const isExcluded = (node: Node) => {
+      const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement
+      return Boolean(element?.closest(excludedSelector))
+    }
+
     const translateTextNode = (node: Text) => {
+      if (isExcluded(node)) return
       const current = node.nodeValue ?? ''
       const previous = textState.current.get(node)
       const source = previous && current === previous.rendered ? previous.source : current
@@ -122,6 +166,7 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
     }
 
     const translateElement = (element: Element) => {
+      if (isExcluded(element)) return
       let state = attributeState.current.get(element)
       if (!state) {
         state = new Map()
@@ -145,9 +190,13 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
       }
       if (start.nodeType !== Node.ELEMENT_NODE) return
       const element = start as Element
-      if (element.closest('[data-no-auto-translate]')) return
+      if (isExcluded(element)) return
       translateElement(element)
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT)
+      const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+        { acceptNode: (node) => isExcluded(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT },
+      )
       let node = walker.nextNode()
       while (node) {
         if (node.nodeType === Node.TEXT_NODE) translateTextNode(node as Text)
@@ -156,18 +205,48 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
       }
     }
 
-    walk(root)
-    const observer = new MutationObserver((mutations) => {
-      observer.disconnect()
-      for (const mutation of mutations) {
-        if (mutation.type === 'characterData') translateTextNode(mutation.target as Text)
-        if (mutation.type === 'attributes') translateElement(mutation.target as Element)
-        mutation.addedNodes.forEach(walk)
-      }
-      observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...translatedAttributes] })
+    const pending = new Set<Node>()
+    let frameId: number | null = null
+
+    const observe = () => observer.observe(root, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: [...translatedAttributes],
     })
-    observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...translatedAttributes] })
-    return () => observer.disconnect()
+
+    const flush = () => {
+      frameId = null
+      observer.disconnect()
+      const nodes = [...pending]
+      pending.clear()
+      const roots = nodes.filter((node) =>
+        (node === root || root.contains(node))
+        && !nodes.some((other) => other !== node && other.contains(node)),
+      )
+      roots.forEach(walk)
+      observe()
+    }
+
+    const schedule = (node: Node) => {
+      pending.add(node)
+      if (frameId === null) frameId = window.requestAnimationFrame(flush)
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'characterData' || mutation.type === 'attributes') schedule(mutation.target)
+        mutation.addedNodes.forEach(schedule)
+      }
+    })
+    observe()
+    schedule(root)
+    return () => {
+      observer.disconnect()
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+      pending.clear()
+    }
   }, [language])
 
   return <div ref={rootRef} className="contents">{children}</div>
