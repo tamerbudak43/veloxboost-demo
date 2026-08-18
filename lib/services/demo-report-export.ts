@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { DemoDailyReport, DemoPaymentDetail } from '@/lib/services/demo-report.service'
+import { getExportLanguage } from '@/lib/i18n/export-language'
 
 function escapeCsv(value: string | number) {
   const normalized = String(value).replace(/"/g, '""')
@@ -18,33 +19,35 @@ function amount(value: number) {
 export function renderDemoReportCsv(
   kind: 'finance' | 'growth',
   data: { daily: DemoDailyReport[]; payments: DemoPaymentDetail[]; endingCash: number },
+  language = 'en',
 ) {
+  const { t } = getExportLanguage(language)
   const rows: Array<Array<string | number>> = []
-  rows.push([kind === 'finance' ? 'VELOX DEMO GÜN SONU FİNANS RAPORU' : 'VELOX DEMO AĞ BÜYÜME RAPORU'])
-  rows.push(['Yalnız eğitim ve simülasyon verisidir. Gerçek ödeme, cüzdan veya yatırım hareketi değildir.'])
+  rows.push([kind === 'finance' ? t('financeTitle') : t('growthTitle')])
+  rows.push([t('simulationNote')])
   rows.push([])
 
   if (kind === 'finance') {
-    rows.push(['Tarih', 'Yeni kayıt', 'Giriş USDT', 'Arbitraj brüt USDT', 'Yatırım kâr dağıtımı USDT', 'Doğrudan referral %6 USDT', 'Network geliri USDT', 'Cashback USDT', 'Toplam dağıtım USDT', 'Otomatik ödeme USDT', 'Ödeme kuyruğu USDT', 'Net K/Z USDT', 'Kasa devir USDT'])
+    rows.push([t('date'), t('newRegistrations'), t('deposit'), t('arbitrageGross'), t('investmentDistribution'), t('referral'), t('networkIncome'), t('cashback'), t('totalDistribution'), t('automaticPayment'), t('paymentQueue'), t('profitLoss'), t('closingCash')])
     data.daily.forEach((row) => rows.push([
       row.date, row.registrations, amount(row.deposits), amount(row.arbitrageGross), amount(row.memberAccrual),
       amount(row.referralExpense), amount(row.networkIncome), amount(row.cashback), amount(row.totalDistribution), amount(row.automaticPayments), amount(row.paymentQueue), amount(row.profitLoss), amount(row.closingCash),
     ]))
     rows.push([])
-    rows.push(['Ödeme / ağ detayları'])
-    rows.push(['Tarih', 'Üye', 'VELOX ID', 'Tür', 'Tutar USDT', 'Referans'])
+    rows.push([t('paymentDetails')])
+    rows.push([t('date'), t('member'), 'VELOX ID', t('type'), t('amount'), t('reference')])
     data.payments.forEach((row) => rows.push([row.date, row.name, row.veloxId, row.type, amount(row.amount), row.reference]))
   } else {
-    rows.push(['Tarih', 'Yeni kayıt', 'Kümülatif ağ', 'Günlük giriş USDT', 'Önceki gün ağ', 'Büyüme %', 'Kritik sınır', 'Kasa devir USDT'])
+    rows.push([t('date'), t('newRegistrations'), t('totalNetwork'), t('deposit'), t('previousNetwork'), t('growth'), t('threshold'), t('closingCash')])
     data.daily.forEach((row, index) => {
       const previous = data.daily[index - 1]?.cumulativeMembers ?? 0
       const growth = previous ? ((row.cumulativeMembers - previous) / previous) * 100 : 0
-      const threshold = row.cumulativeMembers >= 100 ? '100+ ölçek kontrolü' : row.cumulativeMembers >= 50 ? '50+ operasyon yoğunluğu' : row.cumulativeMembers >= 25 ? '25+ Bronze ağ eşiği' : row.cumulativeMembers >= 10 ? '10+ ilk doğrulama' : 'Başlangıç'
+      const threshold = row.cumulativeMembers >= 100 ? `100+ ${t('threshold')}` : row.cumulativeMembers >= 50 ? `50+ ${t('threshold')}` : row.cumulativeMembers >= 25 ? '25+ Bronze' : row.cumulativeMembers >= 10 ? `10+ ${t('confirmed')}` : t('starting')
       rows.push([row.date, row.registrations, row.cumulativeMembers, amount(row.deposits), previous, amount(growth), threshold, amount(row.closingCash)])
     })
   }
 
   rows.push([])
-  rows.push(['Rapor sonu', 'Kasa kapanış', amount(data.endingCash)])
+  rows.push([t('reportEnd'), t('closingCash'), amount(data.endingCash)])
   return `\uFEFF${rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')}`
 }

@@ -1,23 +1,26 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 
-const inter = Inter({
-  subsets: ['latin'],
+const inter = localFont({
+  src: [
+    { path: '../public/assets/velox-document-regular.ttf', weight: '400', style: 'normal' },
+    { path: '../public/assets/velox-document-bold.ttf', weight: '700', style: 'normal' },
+  ],
   variable: '--font-sans',
   display: 'swap',
 })
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
+const jetbrainsMono = localFont({
+  src: '../public/assets/velox-pdf-unicode-regular.ttf',
   variable: '--font-mono',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
-  title: 'VELOX — Arbitraj Terminali',
-  description: 'VELOX profesyonel USDT arbitraj ve yatırım operasyon terminali.',
+  title: 'VELOX — Arbitrage Terminal',
+  description: 'VELOX professional USDT arbitrage and investment operations terminal.',
   generator: 'v0.app',
   icons: {
     icon: '/velox-logo.png',
@@ -38,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="tr" className="dark bg-background">
+    <html lang="en" dir="ltr" className="dark bg-background">
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

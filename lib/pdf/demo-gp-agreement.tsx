@@ -9,6 +9,7 @@ import {
   renderToBuffer,
 } from '@react-pdf/renderer'
 import { readFileSync } from 'node:fs'
+import { getExportLanguage } from '@/lib/i18n/export-language'
 
 export type DemoGpAgreementData = {
   memberName: string
@@ -53,62 +54,64 @@ Font.register({
   ],
 })
 
-function Row({ label, value }: { label: string; value: string }) {
-  return <View style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>
+function Row({ label, value, rtl }: { label: string; value: string; rtl: boolean }) {
+  return <View style={[styles.row, rtl ? { flexDirection: 'row-reverse' } : {}]}><Text style={[styles.label, rtl ? { textAlign: 'right' } : {}]}>{label}</Text><Text style={[styles.value, rtl ? { textAlign: 'left' } : {}]}>{value}</Text></View>
 }
 
-function date(value: Date) {
-  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'long', timeZone: 'Europe/Istanbul' }).format(value)
+function date(value: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'Europe/Istanbul' }).format(value)
 }
 
-function DemoGpAgreementPdf({ data }: { data: DemoGpAgreementData }) {
+function DemoGpAgreementPdf({ data, language }: { data: DemoGpAgreementData; language: string }) {
+  const { t, locale, direction } = getExportLanguage(language)
+  const rtl = direction === 'rtl'
   return (
-    <Document title={`VELOX GP Demo Özeti ${data.agreementCode}`} author="VELOX">
-      <Page size="A4" style={styles.page}>
+    <Document title={`VELOX ${t('agreementTitle')} ${data.agreementCode}`} author="VELOX">
+      <Page size="A4" style={[styles.page, rtl ? { textAlign: 'right' } : {}]}>
         <View style={styles.header}>
           <Image src={logoImage} style={styles.logo} />
-          <View><Text style={styles.code}>{data.agreementCode}</Text><Text style={styles.tiny}>DEMO REFERANS NO.</Text></View>
+          <View><Text style={styles.code}>{data.agreementCode}</Text><Text style={styles.tiny}>{t('demoReference')}</Text></View>
         </View>
-        <Text style={styles.title}>GENERAL PARTNER (GP) DEMO ÖZETİ</Text>
-        <Text style={styles.subtitle}>Platform arayüzü ve belge çıktısı örneği</Text>
+        <Text style={styles.title}>{t('agreementTitle')}</Text>
+        <Text style={styles.subtitle}>{t('agreementSubtitle')}</Text>
 
-        <Text style={styles.demo}>Bu PDF yalnızca VELOX demo arayüzünün belge görünümünü göstermek için üretilmiştir. Bağlayıcı sözleşme, yatırım çağrısı, varlık devri, getiri taahhüdü veya geçerli elektronik imza içermez.</Text>
+        <Text style={styles.demo}>{t('demoDisclaimer')}</Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>GENERAL PARTNER (GP)</Text>
-          <Row label="Taraf" value="VELOX Demo Platformu" />
-          <Row label="Rol" value="General Partner (GP) - demo" />
-          <Row label="Belge niteliği" value="Arayüz ve eğitim özeti" />
+          <Row rtl={rtl} label={t('party')} value={t('demoPlatform')} />
+          <Row rtl={rtl} label={t('role')} value="General Partner (GP) - demo" />
+          <Row rtl={rtl} label={t('documentNature')} value={t('interfaceSummary')} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>KATILIMCI KAYDI</Text>
-          <Row label="Ad soyad" value={data.memberName} />
-          <Row label="E-posta" value={data.memberEmail} />
-          <Row label="VELOX kullanıcı kodu" value={data.veloxId} />
-          <Row label="Oluşturulma tarihi" value={date(data.issuedAt)} />
+          <Text style={styles.sectionTitle}>{t('participantRecord')}</Text>
+          <Row rtl={rtl} label={t('fullName')} value={data.memberName} />
+          <Row rtl={rtl} label={t('email')} value={data.memberEmail} />
+          <Row rtl={rtl} label={t('userCode')} value={data.veloxId} />
+          <Row rtl={rtl} label={t('issueDate')} value={date(data.issuedAt, locale)} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DEMO MADDELER</Text>
-          <Text style={styles.clause}>1. Amaç: Bu belge, GP odaklı sözleşme ekranı ile kişiye özel PDF çıktısının tasarımsal işleyişini gösterir.</Text>
-          <Text style={styles.clause}>2. Kapsam: Demo ortamında gerçek para, cüzdan, alım-satım, fon toplama veya varlık aktarımı gerçekleştirilmez.</Text>
-          <Text style={styles.clause}>3. Onay: Aşağıdaki kaşe ve elektronik onay alanı yalnızca arayüz örneğidir; nitelikli elektronik sertifikaya dayalı imza değildir.</Text>
+          <Text style={styles.sectionTitle}>{t('clauses')}</Text>
+          <Text style={styles.clause}>{t('purposeClause')}</Text>
+          <Text style={styles.clause}>{t('scopeClause')}</Text>
+          <Text style={styles.clause}>{t('approvalClause')}</Text>
         </View>
 
         <View style={styles.approval}>
           <Image src={sealImage} style={styles.seal} />
           <View style={styles.signature}>
             <Text style={styles.signatureText}>VELOX Demo</Text>
-            <Text style={styles.signatureLine}>ELEKTRONİK DEMO ONAYI - HUKUKİ GEÇERLİLİĞİ YOKTUR</Text>
+            <Text style={styles.signatureLine}>{t('noLegalValidity')}</Text>
           </View>
         </View>
-        <Text style={styles.footer}>VELOX GP demo özeti - {data.agreementCode} - Bu belge resmî sözleşme veya imzalı hukukî evrak değildir.</Text>
+        <Text style={styles.footer}>{t('agreementFooter')} • {data.agreementCode}</Text>
       </Page>
     </Document>
   )
 }
 
-export async function renderDemoGpAgreement(data: DemoGpAgreementData) {
-  return renderToBuffer(<DemoGpAgreementPdf data={data} />)
+export async function renderDemoGpAgreement(data: DemoGpAgreementData, language = 'en') {
+  return renderToBuffer(<DemoGpAgreementPdf data={data} language={language} />)
 }

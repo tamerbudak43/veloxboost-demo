@@ -5,7 +5,15 @@ import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { investmentReceipt, member } from '@/lib/db/schema'
-import type { InvestmentReceipt } from '@/lib/types'
+import type { InvestmentReceipt, InvestmentReceiptStatus } from '@/lib/types'
+
+function normalizeReceiptStatus(status: string): InvestmentReceiptStatus {
+  return status === 'confirmed' || status === 'rejected' ? status : 'pending'
+}
+
+function normalizeReceipt<T extends { status: string }>(record: T): Omit<T, 'status'> & { status: InvestmentReceiptStatus } {
+  return { ...record, status: normalizeReceiptStatus(record.status) }
+}
 
 function getReceivingAddress() {
   const address = process.env.VELOX_USDT_TRC20_ADDRESS?.trim()
@@ -29,7 +37,7 @@ async function currentUserId() {
  * Creates a pending instruction, not a completed payment receipt. A document
  * becomes downloadable only after the deposit is verified on-chain/admin side.
  */
-export async function createInvestmentInstruction(rawAmount: number) {
+export async function createInvestmentInstruction(rawAmount: number): Promise<InvestmentReceipt> {
   const amount = Number(rawAmount)
   if (!Number.isFinite(amount) || amount < 50) {
     throw new Error('Minimum yatırım tutarı 50 USDT olmalıdır.')
@@ -47,16 +55,17 @@ export async function createInvestmentInstruction(rawAmount: number) {
     })
     .returning()
 
-  return record
+  return normalizeReceipt(record)
 }
 
 export async function getMyInvestmentReceipts(): Promise<InvestmentReceipt[]> {
   const userId = await currentUserId()
-  return db
+  const records = await db
     .select()
     .from(investmentReceipt)
     .where(eq(investmentReceipt.userId, userId))
     .orderBy(desc(investmentReceipt.issuedAt))
+  return records.map(normalizeReceipt)
 }
 
 export type AdminInvestmentReceipt = InvestmentReceipt & {
@@ -71,7 +80,7 @@ export async function getPendingInvestmentReceipts(): Promise<AdminInvestmentRec
   const [operator] = await db.select().from(member).where(eq(member.userId, session.user.id)).limit(1)
   if (operator?.role !== 'admin') throw new Error('Bu işlem için yönetici yetkisi gerekir.')
 
-  return db
+  const records = await db
     .select({
       id: investmentReceipt.id,
       receiptNumber: investmentReceipt.receiptNumber,
@@ -90,6 +99,7 @@ export async function getPendingInvestmentReceipts(): Promise<AdminInvestmentRec
     .innerJoin(member, eq(member.userId, investmentReceipt.userId))
     .where(eq(investmentReceipt.status, 'pending'))
     .orderBy(desc(investmentReceipt.issuedAt))
+  return records.map(normalizeReceipt)
 }
 
 /** Admin-only confirmation. The blockchain transaction hash is required so
@@ -129,5 +139,5 @@ export async function confirmInvestmentReceipt(
     .returning()
 
   if (!updated) return { ok: false, error: 'Bekleyen yatırım talimatı bulunamadı veya daha önce işleme alındı.' }
-  return { ok: true, receipt: updated }
+  return { ok: true, receipt: normalizeReceipt(updated) }
 }

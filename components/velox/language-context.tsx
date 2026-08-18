@@ -9,7 +9,7 @@ const storageKey = 'velox-language'
 
 const english = {
   topArbitrage: 'Arbitrage', topTrading: 'Trading', topAutoWithdraw: 'Auto Withdraw',
-  deposit: 'Deposit', buy: 'Buy', management: 'Management', notifications: 'Notifications',
+  deposit: 'Deposit', withdraw: 'Withdraw', buy: 'Buy', management: 'Management', notifications: 'Notifications',
   settings: 'Settings', signOut: 'Sign out', language: 'Language selection', languageHint: 'Your preference is saved on this device.',
   panel: 'NAVIGATION — PANEL', control: 'NAVIGATION — CONTROL', network: 'NETWORK', account: 'ACCOUNT',
   arbitrage: 'Arbitrage', arbitragePro: 'Arbitrage Pro', pools: 'Arbitrage Pools', trade: 'VELOX Trade', liquidity: 'Liquidity', poolPercent: 'Pool Percentage', contract: 'Contract',
@@ -20,7 +20,7 @@ const english = {
 
 const turkish: typeof english = {
   topArbitrage: 'Arbitraj', topTrading: 'İşlemde', topAutoWithdraw: 'Otomatik Çekim',
-  deposit: 'Bakiye Yatır', buy: 'Satın Al', management: 'Yönetim', notifications: 'Bildirimler',
+  deposit: 'Bakiye Yatır', withdraw: 'Bakiye Çek', buy: 'Satın Al', management: 'Yönetim', notifications: 'Bildirimler',
   settings: 'Ayarlar', signOut: 'Çıkış yap', language: 'Dil seçimi', languageHint: 'Tercihin bu cihazda saklanır.',
   panel: 'NAVİGASYON — PANEL', control: 'NAVİGASYON — KONTROL', network: 'AĞ', account: 'HESAP',
   arbitrage: 'Arbitraj', arbitragePro: 'Arbitraj Pro', pools: 'Arbitraj Havuzları', trade: 'VELOX Trade', liquidity: 'Likidite', poolPercent: 'Havuz Yüzdesi', contract: 'Sözleşme',
@@ -109,16 +109,19 @@ const locales: Record<LanguageCode, string> = {
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>('tr')
+  // English is the product default. A returning visitor's explicit choice is
+  // restored from localStorage as soon as the provider mounts.
+  const [language, setLanguageState] = useState<LanguageCode>('en')
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey) as LanguageCode | null
-    if (saved && dictionaries[saved]) applyLanguage(saved)
+    applyLanguage(saved && dictionaries[saved] ? saved : 'en')
   }, [])
 
   function applyLanguage(nextLanguage: LanguageCode) {
     setLanguageState(nextLanguage)
     window.localStorage.setItem(storageKey, nextLanguage)
+    document.cookie = `${storageKey}=${nextLanguage}; Path=/; Max-Age=31536000; SameSite=Lax`
     document.documentElement.lang = nextLanguage
     document.documentElement.dir = nextLanguage === 'ar' || nextLanguage === 'fa' ? 'rtl' : 'ltr'
   }

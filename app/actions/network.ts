@@ -19,6 +19,7 @@ import { getDemoMarketScenarios } from '@/lib/network/demo-market-scenario'
 import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 import { evaluateCashback } from '@/lib/services/cashback.service'
 import { buildDemoFinanceSummary } from '@/lib/services/demo-finance.service'
+import type { CommissionRow } from '@/lib/network/types'
 
 /**
  * Assembles the network explorer from the signed-in member and the persisted
@@ -96,7 +97,7 @@ export async function getNetworkData() {
   const memberList = buildMemberList(members, rootId)
   // Commission history must be read from immutable ledger/earning records.
   // Until that phase is implemented, never fabricate an earning from volume.
-  const earnings = []
+  const earnings: CommissionRow[] = []
 
   const metrics: CareerMetrics = {
     personalPartners: summary.directPartners,

@@ -35,7 +35,7 @@ export function LanguageSwitcher() {
   const { language: selectedCode, setLanguage, t } = useLanguage()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const selected = languages.find((language) => language.code === selectedCode) ?? languages[9]
+  const selected = languages.find((language) => language.code === selectedCode) ?? languages[0]
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {

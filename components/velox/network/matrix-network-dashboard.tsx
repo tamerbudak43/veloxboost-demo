@@ -32,7 +32,7 @@ export function MatrixNetworkDashboard(props: {
 }) {
   const [tab, setTab] = useState<Tab>('overview')
   const [level, setLevel] = useState<number>(1)
-  const levelMembers = useMemo(() => safeArray(props.memberList).filter((item) => item.level === level), [level, props.memberList])
+  const levelMembers = useMemo(() => props.memberList.filter((item) => item.level === level), [level, props.memberList])
   const summary = props.summary
 
   return (
@@ -64,9 +64,9 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
 }
 
 function Overview({ summary, referralCode, legs, depthRows, marketScenarios, simulation, cashbackQualification, demoFinance }: Pick<Parameters<typeof MatrixNetworkDashboard>[0], 'summary' | 'referralCode' | 'legs' | 'depthRows' | 'marketScenarios' | 'simulation' | 'cashbackQualification' | 'demoFinance'>) {
-  const openLevels = safeArray(depthRows).filter((item) => item.unlocked).length
-  const activeScenario = safeArray(marketScenarios).find((item) => item.active) ?? marketScenarios[0]
-  const networkIncomePreview = safeArray(depthRows)
+  const openLevels = depthRows.filter((item) => item.unlocked).length
+  const activeScenario = marketScenarios.find((item) => item.active) ?? marketScenarios[0]
+  const networkIncomePreview = depthRows
     .filter((item) => item.unlocked)
     .reduce((total, item) => total + safeNumber(item.investment) * ((activeScenario?.rate ?? 0) / 100) * (safeNumber(item.commissionRate) / 100), 0)
   const distributableNetworkIncome = networkIncomePreview
@@ -95,7 +95,7 @@ function DemoAutoSettlement({ summary, depthRows, simulation, networkIncome }: {
   const accrued = networkIncome + directCommission + cashback
   const automaticWithdrawal = accrued >= 25 ? accrued : 0
   const reserve = Math.max(0, safeNumber(summary.teamVolume) - automaticWithdrawal)
-  const earningLevels = safeArray(depthRows).filter((item) => item.unlocked && item.investment > 0).length
+  const earningLevels = depthRows.filter((item) => item.unlocked && item.investment > 0).length
   return <Panel className="mt-4 border-emerald-500/30"><PanelHeader title="Demo kasa ve otomatik çekim özeti" right={<StatusPill tone={automaticWithdrawal > 0 ? 'success' : 'neutral'}>{automaticWithdrawal > 0 ? 'Demo otomatik çekim hazır' : '25 USDT eşiği bekleniyor'}</StatusPill>} /><div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Demo kasa görünümü" value={formatUSDT(reserve, 2)} /><Metric label="Doğrudan komisyon · %6" value={formatUSDT(directCommission, 2)} /><Metric label="Network geliri · demo" value={formatUSDT(networkIncome, 2)} /><Metric label="Cashback · demo" value={formatUSDT(cashback, 2)} /></div><div className="mx-4 mb-4 rounded-md border border-border bg-elevated p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-semibold text-foreground">Gün {simulation.currentDay}/7 · otomatik çekim kuralı</p><p className="mt-1 text-sm text-muted-foreground">Komisyon, ağ geliri ve cashback demo toplamı 25 USDT’ye ulaştığında bu satır otomatik çekim senaryosuna geçer.</p></div><p className={automaticWithdrawal > 0 ? 'font-mono text-xl font-semibold text-emerald-300' : 'font-mono text-xl font-semibold text-muted-foreground'}>{automaticWithdrawal > 0 ? `−${formatUSDT(automaticWithdrawal, 2)}` : `${formatUSDT(accrued, 2)} / 25,00 USDT`}</p></div><p className="mt-3 text-xs text-muted-foreground">{earningLevels} açık derinlikte yatırım verisiyle hesaplandı. “Demo kasa”, “otomatik çekim” ve tüm tutarlar eğitim/test görünümüdür; gerçek para, cüzdan, ödeme talimatı ya da çekim işlemi değildir.</p></div></Panel>
 }
 
@@ -105,7 +105,7 @@ function DemoFinance({ finance }: { finance: DemoFinanceSummary }) {
 }
 
 function Depths({ level, onLevelChange, members, depthRows, unlockedDepth }: { level: number; onLevelChange: (value: number) => void; members: NetworkListRow[]; depthRows: DepthRow[]; unlockedDepth: number }) {
-  const row = safeArray(depthRows).find((item) => item.level === level)
+  const row = depthRows.find((item) => item.level === level)
   return <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]"><Panel><PanelHeader title="Seviye derinlikleri" right={<Layers3 className="size-4 text-cyan" />} /><div className="max-h-[640px] divide-y divide-border overflow-y-auto">{safeArray(depthRows).map((item) => <button key={item.level} type="button" onClick={() => onLevelChange(item.level)} className={item.level === level ? 'flex w-full items-center justify-between bg-cyan/10 px-5 py-3 text-left' : 'flex w-full items-center justify-between px-5 py-3 text-left hover:bg-elevated/60'}><span><span className="font-mono font-semibold text-foreground">Seviye {item.level}</span><span className="ml-2 text-xs text-muted-foreground">{item.members} kişi · {formatUSDT(item.investment, 0)} yatırım · %{item.commissionRate}</span></span><StatusPill tone={item.unlocked ? 'success' : 'neutral'}>{item.unlocked ? 'Açık' : 'Kilitli'}</StatusPill></button>)}</div></Panel><Panel><PanelHeader title={`Seviye ${level} üyeleri`} right={<span className="text-xs text-muted-foreground">Açık derinlik: {unlockedDepth}/33</span>} />{row && !row.unlocked ? <Empty text="Bu seviye mevcut kariyerinizde kilitli." /> : members.length === 0 ? <Empty text="Bu seviyede kayıtlı üye yok." /> : <div className="divide-y divide-border">{members.map((member) => <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"><div className="flex items-center gap-3"><PartnerAvatar name={member.name} seed={member.veloxId} /><div><p className="font-semibold text-foreground">{member.name}</p><p className="font-mono text-xs text-muted-foreground">{member.veloxId} · {member.career}</p></div></div><div className="flex items-center gap-5 text-right"><div><p className="font-mono text-sm font-semibold text-foreground">{formatUSDT(member.personalInvestment, 2)}</p><p className="text-xs text-muted-foreground">doğrulanmış demo yatırım</p></div><div><p className="font-mono text-sm font-semibold text-foreground">{formatUSDT(member.teamVolume, 2)}</p><p className="text-xs text-muted-foreground">ekip cirosu</p></div></div></div>)}</div>}</Panel></div>
 }
 

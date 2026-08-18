@@ -94,6 +94,7 @@ function DepositTab({
   initialReceipts: InvestmentReceipt[]
   depositAddress?: string | null
 }) {
+  const { language } = useLanguage()
   const [copied, setCopied] = useState(false)
   const [amount, setAmount] = useState('')
   const [creating, setCreating] = useState(false)
@@ -205,7 +206,7 @@ function DepositTab({
                     <p className="mt-1 text-xs text-muted-foreground">{formatUSDT(receipt.amount)} • {receipt.network} • {downloadable ? 'Doğrulandı' : 'Ağ doğrulaması bekliyor'}</p>
                   </div>
                   {downloadable ? (
-                    <a href={`/api/receipts/${encodeURIComponent(receipt.receiptNumber)}`} className="inline-flex items-center gap-1.5 rounded-md border border-cyan/40 px-3 py-1.5 text-xs font-medium text-cyan transition-colors hover:bg-cyan/10">
+                    <a href={`/api/receipts/${encodeURIComponent(receipt.receiptNumber)}?lang=${language}`} className="inline-flex items-center gap-1.5 rounded-md border border-cyan/40 px-3 py-1.5 text-xs font-medium text-cyan transition-colors hover:bg-cyan/10">
                       <Download className="size-3.5" /> PDF indir
                     </a>
                   ) : (

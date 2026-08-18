@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DesktopSidebar, SidebarContent } from './sidebar'
 import { TopNav } from './top-nav'
 import { LanguageProvider, useLanguage } from './language-context'
+import { AutoTranslate } from './ui-auto-translator'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return <LanguageProvider><LocalizedAppShell>{children}</LocalizedAppShell></LanguageProvider>
@@ -46,7 +47,7 @@ function LocalizedAppShell({ children }: { children: React.ReactNode }) {
       <div className="lg:ps-[186px]">
         <TopNav onOpenSidebar={() => setMobileOpen(true)} />
         <main className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-4 lg:px-6">
-          {children}
+          <AutoTranslate>{children}</AutoTranslate>
         </main>
       </div>
     </div>

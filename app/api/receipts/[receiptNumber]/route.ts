@@ -5,11 +5,12 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { investmentReceipt, member } from '@/lib/db/schema'
 import { renderInvestmentReceipt } from '@/lib/pdf/investment-receipt'
+import { exportLanguageFromRequest } from '@/lib/i18n/export-language'
 
 export const runtime = 'nodejs'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ receiptNumber: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -38,11 +39,12 @@ export async function GET(
   if (!record) return new NextResponse('Belge bulunamadı.', { status: 404 })
   if (record.status !== 'confirmed') return new NextResponse('Belge, ağ doğrulamasından sonra indirilebilir.', { status: 409 })
 
+  const language = exportLanguageFromRequest(request)
   const pdf = await renderInvestmentReceipt({
     ...record,
     issuedAt: record.issuedAt,
     confirmedAt: record.confirmedAt,
-  })
+  }, language)
 
   return new NextResponse(pdf, {
     headers: {

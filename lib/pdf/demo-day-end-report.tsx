@@ -1,6 +1,7 @@
 import { Document, Font, Page, Path, Svg, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer'
 import path from 'node:path'
 import type { DemoDailyReport, DemoPaymentDetail } from '@/lib/services/demo-report.service'
+import { getExportLanguage } from '@/lib/i18n/export-language'
 
 const pdfAssets = path.join(process.cwd(), 'public', 'assets')
 
@@ -24,8 +25,8 @@ const s = StyleSheet.create({
   amount: { width: '11%', fontSize: 7, textAlign: 'right' },
   footer: { position: 'absolute', bottom: 24, left: 34, right: 34, fontSize: 7, color: '#526579' },
 })
-const n = (value: number) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
-const Row = ({ values }: { values: string[] }) => <View style={s.row}>{values.map((value, index) => <Text key={`${value}-${index}`} style={[s.cell, { width: `${100 / values.length}%`, textAlign: index === 0 ? 'left' : 'right' }]}>{value}</Text>)}</View>
+const n = (value: number, locale: string) => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+const Row = ({ values, rtl = false }: { values: string[]; rtl?: boolean }) => <View style={[s.row, rtl ? { flexDirection: 'row-reverse' } : {}]}>{values.map((value, index) => <Text key={`${value}-${index}`} style={[s.cell, { width: `${100 / values.length}%`, textAlign: rtl ? (index === 0 ? 'right' : 'left') : (index === 0 ? 'left' : 'right') }]}>{value}</Text>)}</View>
 const PdfBrand = () => <View style={s.brand} fixed>
   <Svg width={20} height={20} viewBox="0 0 64 64">
     <Path d="M4 14 L34 14 L26 30 L20 30 Z" fill="#0877E8" />
@@ -35,29 +36,33 @@ const PdfBrand = () => <View style={s.brand} fixed>
   <Text style={s.brandWord}>VELOX</Text><Text style={s.brandTag}>DEMO</Text>
 </View>
 
-export async function renderDemoDayEndReport(data: { daily: DemoDailyReport[]; payments: DemoPaymentDetail[]; endingCash: number }) {
+export async function renderDemoDayEndReport(data: { daily: DemoDailyReport[]; payments: DemoPaymentDetail[]; endingCash: number }, language = 'en') {
+  const { t, locale, direction } = getExportLanguage(language)
+  const rtl = direction === 'rtl'
   const current = data.daily.at(-1)
-  return renderToBuffer(<Document title="VELOX Demo Gün Sonu Raporu" author="VELOX Demo"><Page size="A4" style={s.page}>
+  return renderToBuffer(<Document title={t('financeTitle')} author="VELOX Demo"><Page size="A4" style={[s.page, rtl ? { textAlign: 'right' } : {}]}>
     <PdfBrand />
-    <Text style={s.title}>DEMO GÜN SONU FİNANS RAPORU</Text><Text style={s.sub}>Senaryo verisi - gerçek ödeme, cüzdan ya da yatırım kaydı değildir.</Text>
-    <Text style={s.note}>Arbitraj brüt getirisi %2,6 senaryo oranıdır. Referans bonusu, yeni doğrudan referansın ilk yatırımının bir defalık %6'sıdır. Network geliri, admin komisyon planındaki aktif seviye oranlarından hesaplanır.</Text>
-    <Text style={s.h}>GÜNLÜK FİNANS TABLOSU</Text><Row values={['Tarih', 'Giriş', 'Arb.', 'Yatırım', 'Ref. %6', 'Network', 'Cashback', 'Dağıtım', 'Ödeme', 'K/Z', 'Kasa']} />
-    {data.daily.map((row) => <Row key={row.date} values={[row.date, n(row.deposits), n(row.arbitrageGross), n(row.memberAccrual), n(row.referralExpense), n(row.networkIncome), n(row.cashback), n(row.totalDistribution), n(row.automaticPayments), n(row.profitLoss), n(row.closingCash)]} />)}
-    <Text style={s.h}>SON GÜN ÖZETİ - {current?.date ?? 'Veri yok'}</Text>
-    {current && <><Row values={['Kasa açılış', n(current.openingCash), 'Devir', n(current.turnover), 'Ödeme kuyruğu', n(current.paymentQueue), 'Kasa kapanış', n(current.closingCash)]} /><Row values={['Toplam kasa', n(data.endingCash), 'Kayıt', String(current.registrations), 'Kümülatif üye', String(current.cumulativeMembers), 'Net K/Z', n(current.profitLoss)]} /></>}
-    <Text style={s.h}>ÖDEME / AĞ DETAYI (son 30 kayıt)</Text><Row values={['Tarih', 'Üye', 'SIM ID', 'Tür', 'Tutar', 'Referans']} />
-    {data.payments.slice(-30).reverse().map((item, index) => <Row key={`${item.reference}-${index}`} values={[item.date, item.name, item.veloxId, item.type === 'demo_auto_withdrawal' ? 'Demo oto. çekim' : item.type === 'demo_referral_commission' ? 'Doğrudan ref. %6' : item.type === 'demo_cashback' ? 'Cashback' : 'Network geliri', n(item.amount), item.reference]} />)}
-    <Text style={s.footer}>VELOX demo raporu - yalnız eğitim/simülasyon verisi - oluşturma: {new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul' }).format(new Date())}</Text>
+    <Text style={s.title}>{t('financeTitle')}</Text><Text style={s.sub}>{t('simulationNote')}</Text>
+    <Text style={s.note}>{t('simulationNote')}</Text>
+    <Text style={s.h}>{t('financeTitle')}</Text><Row rtl={rtl} values={[t('date'), t('deposit'), 'Arb.', t('investmentDistribution'), 'Ref. 6%', t('networkIncome'), t('cashback'), t('totalDistribution'), t('automaticPayment'), t('profitLoss'), t('closingCash')]} />
+    {data.daily.map((row) => <Row rtl={rtl} key={row.date} values={[row.date, n(row.deposits, locale), n(row.arbitrageGross, locale), n(row.memberAccrual, locale), n(row.referralExpense, locale), n(row.networkIncome, locale), n(row.cashback, locale), n(row.totalDistribution, locale), n(row.automaticPayments, locale), n(row.profitLoss, locale), n(row.closingCash, locale)]} />)}
+    <Text style={s.h}>{t('reportEnd')} - {current?.date ?? t('noData')}</Text>
+    {current && <><Row rtl={rtl} values={[t('closingCash'), n(current.openingCash, locale), t('totalDistribution'), n(current.turnover, locale), t('paymentQueue'), n(current.paymentQueue, locale), t('closingCash'), n(current.closingCash, locale)]} /><Row rtl={rtl} values={[t('closingCash'), n(data.endingCash, locale), t('newRegistrations'), String(current.registrations), t('totalNetwork'), String(current.cumulativeMembers), t('profitLoss'), n(current.profitLoss, locale)]} /></>}
+    <Text style={s.h}>{t('paymentDetails')}</Text><Row rtl={rtl} values={[t('date'), t('member'), 'SIM ID', t('type'), t('amount'), t('reference')]} />
+    {data.payments.slice(-30).reverse().map((item, index) => <Row rtl={rtl} key={`${item.reference}-${index}`} values={[item.date, item.name, item.veloxId, item.type, n(item.amount, locale), item.reference]} />)}
+    <Text style={s.footer}>VELOX demo • {t('simulationNote')} • {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul' }).format(new Date())}</Text>
   </Page></Document>)
 }
 
-export async function renderDemoGrowthReport(data: { daily: DemoDailyReport[] }) {
-  return renderToBuffer(<Document title="VELOX Demo Ağ Büyüme Raporu" author="VELOX Demo"><Page size="A4" style={s.page}>
+export async function renderDemoGrowthReport(data: { daily: DemoDailyReport[] }, language = 'en') {
+  const { t, locale, direction } = getExportLanguage(language)
+  const rtl = direction === 'rtl'
+  return renderToBuffer(<Document title={t('growthTitle')} author="VELOX Demo"><Page size="A4" style={[s.page, rtl ? { textAlign: 'right' } : {}]}>
     <PdfBrand />
-    <Text style={s.title}>DEMO AĞ BÜYÜME RAPORU</Text><Text style={s.sub}>Günlük kayıt hızı, kümülatif ağ ve kritik eşik görünümü.</Text><Text style={s.note}>Bu rapor sentetik kayıtlar üzerinden oluşturulur; gerçek üye veya gelir performansı anlamına gelmez.</Text>
-    <Text style={s.h}>GÜNLÜK BÜYÜME TABLOSU</Text><Row values={['Tarih', 'Yeni kayıt', 'Toplam ağ', 'Günlük giriş', 'Önceki gün', 'Büyüme %', 'Kritik eşik', 'Kasa']} />
-    {data.daily.map((row, index) => { const prev = data.daily[index - 1]?.cumulativeMembers ?? 0; const growth = prev ? ((row.cumulativeMembers - prev) / prev) * 100 : 0; const threshold = row.cumulativeMembers >= 50 ? '50+ ağ' : row.cumulativeMembers >= 25 ? '25+ ağ' : row.cumulativeMembers >= 10 ? '10+ ağ' : 'Başlangıç'; return <Row key={row.date} values={[row.date, String(row.registrations), String(row.cumulativeMembers), n(row.deposits), String(prev), `%${n(growth)}`, threshold, n(row.closingCash)]} /> })}
-    <Text style={s.h}>KRİTİK SINIRLAR</Text><Text style={s.sub}>10 üye: ilk doğrulama • 25 üye: Bronze ağ eşiği • 50 üye: operasyon yoğunluğu • 100 üye: ölçek ve ödeme kuyruğu kontrolü.</Text>
-    <Text style={s.footer}>VELOX demo ağ raporu - yalnız eğitim/simülasyon verisi.</Text>
+    <Text style={s.title}>{t('growthTitle')}</Text><Text style={s.sub}>{t('simulationNote')}</Text><Text style={s.note}>{t('simulationNote')}</Text>
+    <Text style={s.h}>{t('growthTitle')}</Text><Row rtl={rtl} values={[t('date'), t('newRegistrations'), t('totalNetwork'), t('deposit'), t('previousNetwork'), t('growth'), t('threshold'), t('closingCash')]} />
+    {data.daily.map((row, index) => { const prev = data.daily[index - 1]?.cumulativeMembers ?? 0; const growth = prev ? ((row.cumulativeMembers - prev) / prev) * 100 : 0; const threshold = row.cumulativeMembers >= 50 ? `50+ ${t('threshold')}` : row.cumulativeMembers >= 25 ? '25+ Bronze' : row.cumulativeMembers >= 10 ? `10+ ${t('confirmed')}` : t('starting'); return <Row rtl={rtl} key={row.date} values={[row.date, String(row.registrations), String(row.cumulativeMembers), n(row.deposits, locale), String(prev), `%${n(growth, locale)}`, threshold, n(row.closingCash, locale)]} /> })}
+    <Text style={s.h}>{t('threshold')}</Text><Text style={s.sub}>10 • 25 • 50 • 100</Text>
+    <Text style={s.footer}>VELOX demo • {t('simulationNote')}</Text>
   </Page></Document>)
 }

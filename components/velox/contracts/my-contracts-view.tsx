@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import { BadgeCheck, ClipboardList, Download, FileText, Landmark, PenLine, ShieldCheck, Stamp, UserRound } from 'lucide-react'
 import { Panel, StatusPill } from '@/components/velox/primitives'
+import { useLanguage } from '@/components/velox/language-context'
 
 type DemoContract = {
   title: string
@@ -36,6 +37,7 @@ const contracts: DemoContract[] = [
 
 export function MyContractsView({ memberName, memberEmail, veloxId }: { memberName: string; memberEmail: string; veloxId: string }) {
   const [selected, setSelected] = useState(0)
+  const { language } = useLanguage()
   const contract = contracts[selected]
 
   return (
@@ -57,7 +59,7 @@ export function MyContractsView({ memberName, memberEmail, veloxId }: { memberNa
       </div>
 
       <div className="flex justify-end">
-        <a href="/api/contracts/demo" className="inline-flex items-center gap-2 rounded-md border border-cyan/40 px-3.5 py-2 text-sm font-medium text-cyan transition-colors hover:bg-cyan/10"><Download className="size-4" /> Demo PDF indir</a>
+        <a href={`/api/contracts/demo?lang=${language}`} className="inline-flex items-center gap-2 rounded-md border border-cyan/40 px-3.5 py-2 text-sm font-medium text-cyan transition-colors hover:bg-cyan/10"><Download className="size-4" /> Demo PDF indir</a>
       </div>
 
       <Panel className="overflow-hidden">

@@ -9,6 +9,7 @@ import {
   renderToBuffer,
 } from '@react-pdf/renderer'
 import { readFileSync } from 'node:fs'
+import { getExportLanguage } from '@/lib/i18n/export-language'
 
 export type ReceiptPdfData = {
   receiptNumber: string
@@ -68,62 +69,62 @@ Font.register({
   ],
 })
 
-function date(value: Date | null) {
+function date(value: Date | null, locale: string) {
   if (!value) return '—'
-  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul' }).format(value)
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul' }).format(value)
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return <View style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>
+function Row({ label, value, rtl }: { label: string; value: string; rtl: boolean }) {
+  return <View style={[styles.row, rtl ? { flexDirection: 'row-reverse' } : {}]}><Text style={[styles.label, rtl ? { textAlign: 'right' } : {}]}>{label}</Text><Text style={[styles.value, rtl ? { textAlign: 'left' } : {}]}>{value}</Text></View>
 }
 
-function InvestmentReceiptPdf({ data }: { data: ReceiptPdfData }) {
+function InvestmentReceiptPdf({ data, language }: { data: ReceiptPdfData; language: string }) {
+  const { t, locale, direction } = getExportLanguage(language)
+  const rtl = direction === 'rtl'
   return (
-    <Document title={`VELOX yatırım işlem belgesi ${data.receiptNumber}`} author="VELOX">
-      <Page size="A4" style={styles.page}>
+    <Document title={`VELOX ${t('receiptTitle')} ${data.receiptNumber}`} author="VELOX">
+      <Page size="A4" style={[styles.page, rtl ? { textAlign: 'right' } : {}]}>
         <Image src={logoImage} style={styles.headerLogo} />
-        <Text style={styles.title}>YATIRIM İŞLEM BELGESİ</Text>
-        <Text style={styles.subtitle}>Doğrulanmış dijital varlık yatırımı işlem özeti</Text>
+        <Text style={styles.title}>{t('receiptTitle')}</Text>
+        <Text style={styles.subtitle}>{t('receiptSubtitle')}</Text>
         <View style={styles.rule} />
 
-        <Row label="Belge numarası" value={data.receiptNumber} />
-        <Row label="Belge oluşturma tarihi" value={date(data.issuedAt)} />
-        <Row label="Ağ doğrulama tarihi" value={date(data.confirmedAt)} />
-        <Row label="İşlem durumu" value={data.status === 'confirmed' ? 'Doğrulandı' : data.status} />
+        <Row rtl={rtl} label={t('documentNumber')} value={data.receiptNumber} />
+        <Row rtl={rtl} label={t('issueDate')} value={date(data.issuedAt, locale)} />
+        <Row rtl={rtl} label={t('confirmationDate')} value={date(data.confirmedAt, locale)} />
+        <Row rtl={rtl} label={t('transactionStatus')} value={data.status === 'confirmed' ? t('confirmed') : data.status} />
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ÜYE BİLGİLERİ</Text>
-          <Row label="Ad soyad" value={data.memberName} />
-          <Row label="E-posta" value={data.memberEmail} />
+          <Text style={styles.sectionTitle}>{t('memberInfo')}</Text>
+          <Row rtl={rtl} label={t('fullName')} value={data.memberName} />
+          <Row rtl={rtl} label={t('email')} value={data.memberEmail} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>YATIRIM BİLGİLERİ</Text>
-          <Row label="Yatırım tutarı" value={`${data.amount} ${data.asset}`} />
-          <Row label="Ağ" value={data.network} />
-          <Row label="Alıcı adresi" value={data.receivingAddress} />
-          <Row label="İşlem hash" value={data.transactionHash ?? '—'} />
+          <Text style={styles.sectionTitle}>{t('investmentInfo')}</Text>
+          <Row rtl={rtl} label={t('investmentAmount')} value={`${data.amount} ${data.asset}`} />
+          <Row rtl={rtl} label={t('network')} value={data.network} />
+          <Row rtl={rtl} label={t('receivingAddress')} value={data.receivingAddress} />
+          <Row rtl={rtl} label={t('transactionHash')} value={data.transactionHash ?? '—'} />
         </View>
 
-        <Text style={styles.note}>
-          Bu belge VELOX platformundaki doğrulanmış yatırım işleminin özetidir. Resmî vergi faturası, kâr taahhüdü veya yatırım tavsiyesi değildir. İşlem hash değeri, ilgili blok zinciri kaydından bağımsız olarak doğrulanabilir.
-        </Text>
+        <Text style={styles.note}>{t('receiptNote')}</Text>
 
         <View style={styles.approval}>
           <Image src={sealImage} style={styles.seal} />
           <View style={styles.signature}>
             <View style={styles.signatureLine} />
-            <Text style={styles.signatureTitle}>Elektronik olarak onaylandı</Text>
-            <Text style={styles.signatureSub}>VELOX Operations • {date(data.confirmedAt)}</Text>
+            <Text style={styles.signatureTitle}>{t('electronicApproval')}</Text>
+            <Text style={styles.signatureSub}>VELOX Operations • {date(data.confirmedAt, locale)}</Text>
           </View>
         </View>
 
-        <Text style={styles.footer}>VELOX işlem belgesi • Belge numarası ile platform hesabınızdan tekrar doğrulanabilir.</Text>
+        <Text style={styles.footer}>{t('receiptFooter')}</Text>
       </Page>
     </Document>
   )
 }
 
-export async function renderInvestmentReceipt(data: ReceiptPdfData) {
-  return renderToBuffer(<InvestmentReceiptPdf data={data} />)
+export async function renderInvestmentReceipt(data: ReceiptPdfData, language = 'en') {
+  return renderToBuffer(<InvestmentReceiptPdf data={data} language={language} />)
 }

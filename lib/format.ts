@@ -5,6 +5,7 @@
  */
 
 /** Returns the value if it is an array, otherwise an empty typed array. */
+export function safeArray<T>(value: T[]): T[]
 export function safeArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : []
 }

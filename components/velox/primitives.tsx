@@ -1,20 +1,19 @@
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /** Terminal panel surface with fine borders. */
 export function Panel({
   className,
   children,
-}: {
-  className?: string
-  children: ReactNode
-}) {
+  ...props
+}: ComponentPropsWithoutRef<'div'>) {
   return (
     <div
       className={cn(
         'rounded-lg border border-border bg-card',
         className,
       )}
+      {...props}
     >
       {children}
     </div>
