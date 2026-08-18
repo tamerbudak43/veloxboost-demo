@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Download,
   FileText,
+  ChevronDown,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,17 +28,18 @@ import { demoBalance } from '@/lib/demo-data'
 import { createInvestmentInstruction } from '@/app/actions/investment-receipt'
 import type { InvestmentReceipt } from '@/lib/types'
 import { useLanguage } from '@/components/velox/language-context'
+import type { WalletNetworkConfig, WalletNetworkId } from '@/lib/wallet/network-config'
 
 type WalletTab = 'deposit' | 'withdraw' | 'auto'
 
 export function WalletView({
   initialTab = 'deposit',
   initialReceipts = [],
-  depositAddress,
+  walletNetworks,
 }: {
   initialTab?: WalletTab
   initialReceipts?: InvestmentReceipt[]
-  depositAddress?: string | null
+  walletNetworks: WalletNetworkConfig[]
 }) {
   const [tab, setTab] = useState<WalletTab>(initialTab)
   const { t } = useLanguage()
@@ -50,7 +53,7 @@ export function WalletView({
     <div>
       <PageHeader
         title="Cüzdan İşlemleri"
-        description="USDT (TRC-20) bakiye yatırma, çekim talebi ve otomatik çekim kurallarını yönetin."
+        description="Desteklenen USDT ağlarında bakiye yatırma, çekim talebi ve otomatik çekim kurallarını yönetin."
       />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
@@ -80,34 +83,36 @@ export function WalletView({
         })}
       </div>
 
-      {tab === 'deposit' && <DepositTab initialReceipts={initialReceipts} depositAddress={depositAddress} />}
-      {tab === 'withdraw' && <WithdrawTab />}
-      {tab === 'auto' && <AutoWithdrawTab />}
+      {tab === 'deposit' && <DepositTab initialReceipts={initialReceipts} walletNetworks={walletNetworks} />}
+      {tab === 'withdraw' && <WithdrawTab walletNetworks={walletNetworks} />}
+      {tab === 'auto' && <AutoWithdrawTab walletNetworks={walletNetworks} />}
     </div>
   )
 }
 
 function DepositTab({
   initialReceipts,
-  depositAddress,
+  walletNetworks,
 }: {
   initialReceipts: InvestmentReceipt[]
-  depositAddress?: string | null
+  walletNetworks: WalletNetworkConfig[]
 }) {
-  const { language } = useLanguage()
-  const [copied, setCopied] = useState(false)
+  const defaultNetwork = walletNetworks.find((network) => network.configured) ?? walletNetworks[0]
+  const [networkId, setNetworkId] = useState<WalletNetworkId>(defaultNetwork?.id ?? 'TON')
+  const [copiedField, setCopiedField] = useState<'address' | 'memo' | null>(null)
   const [amount, setAmount] = useState('')
   const [creating, setCreating] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [receipts, setReceipts] = useState(initialReceipts)
+  const selectedNetwork = walletNetworks.find((network) => network.id === networkId) ?? defaultNetwork
 
-  const copy = async () => {
-    if (!depositAddress) return
+  const copy = async (field: 'address' | 'memo', value: string | null) => {
+    if (!value) return
     try {
-      await navigator.clipboard.writeText(depositAddress)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
+      await navigator.clipboard.writeText(value)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 1600)
     } catch {
       /* clipboard unavailable */
     }
@@ -118,7 +123,7 @@ function DepositTab({
     setMessage(null)
     setCreating(true)
     try {
-      const receipt = await createInvestmentInstruction(Number(amount))
+      const receipt = await createInvestmentInstruction(Number(amount), networkId)
       setReceipts((current) => [receipt, ...current])
       setMessage(`Talimat ${receipt.receiptNumber} ile oluşturuldu. Ağ doğrulamasından sonra PDF indirilebilir.`)
       setAmount('')
@@ -132,32 +137,42 @@ function DepositTab({
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
       <Panel>
-        <PanelHeader title="USDT Yatırma Adresi" right={<StatusPill tone="active">TRC-20</StatusPill>} />
-        <div className="p-4">
-          <div className="rounded-lg border border-border bg-elevated p-4">
-            <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-              Cüzdan adresi (yalnızca USDT-TRC20)
-            </span>
-            <div className="mt-2 flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-card px-3 py-2 font-mono text-sm text-foreground">
-                {depositAddress ?? 'Yönetici tarafından yapılandırılmayı bekliyor'}
-              </code>
-              <Button variant="outline" size="icon-sm" aria-label="Adresi kopyala" onClick={copy} disabled={!depositAddress}>
-                {copied ? <Check className="text-light-cyan" /> : <Copy />}
-              </Button>
-            </div>
+        <PanelHeader title="Bakiye yatır" right={<StatusPill tone="active">{selectedNetwork?.id ?? 'USDT'}</StatusPill>} />
+        <div className="space-y-4 p-4">
+          <NetworkSelector networks={walletNetworks} value={networkId} onChange={setNetworkId} />
+
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-xs leading-5 text-rose-200">
+            <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>USDT varlığında çalışmanın minimum tutarı <strong>{selectedNetwork?.minimumDeposit ?? 100} USDT</strong>.</span></div>
           </div>
 
-          <ul className="mt-4 flex flex-col gap-2 text-xs text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <Info className="mt-0.5 size-3.5 shrink-0 text-bright" />
-              Yalnızca TRON (TRC-20) ağı üzerinden USDT gönderin. Diğer ağlar kayıpla sonuçlanır.
-            </li>
-            <li className="flex items-start gap-2">
-              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-light-cyan" />
-              Yatırımlar ağ onayından sonra ticaret bakiyenize otomatik eklenir.
-            </li>
-          </ul>
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-xs leading-5 text-rose-200">
+            <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>Cüzdan bakiyenizi USDT kripto para ile gönderin. Yanlış ağ veya eksik Memo/Etiket kullanılması durumunda transfer geri alınamayabilir.</span></div>
+          </div>
+
+          <CopyField
+            label="Cüzdan adresi"
+            value={selectedNetwork?.depositAddress ?? null}
+            placeholder="Yönetici tarafından yapılandırılmayı bekliyor"
+            copied={copiedField === 'address'}
+            onCopy={() => copy('address', selectedNetwork?.depositAddress ?? null)}
+          />
+
+          {selectedNetwork?.memoRequired ? (
+            <CopyField
+              label="Memo / Etiket"
+              value={selectedNetwork.depositMemo}
+              placeholder="Zorunlu Memo/Etiket yapılandırılmayı bekliyor"
+              badge="ZORUNLU"
+              copied={copiedField === 'memo'}
+              onCopy={() => copy('memo', selectedNetwork.depositMemo)}
+            />
+          ) : null}
+
+          {!selectedNetwork?.configured ? (
+            <p className="flex items-start gap-2 text-xs text-amber-200"><Info className="mt-0.5 size-3.5 shrink-0" />Bu ağ henüz yönetici tarafından etkinleştirilmedi.</p>
+          ) : (
+            <p className="flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-light-cyan" />Yatırımlar ağ onayından sonra ticaret bakiyenize eklenir.</p>
+          )}
         </div>
       </Panel>
 
@@ -175,13 +190,13 @@ function DepositTab({
             className="mt-1.5 w-full rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-electric"
           />
           <p className="mt-3 text-xs text-muted-foreground">
-            Minimum yatırım <span className="font-mono text-foreground">50 USDT</span>. Tutar,
+            Minimum yatırım <span className="font-mono text-foreground">{selectedNetwork?.minimumDeposit ?? 100} USDT</span>. Tutar,
             yukarıdaki adrese gönderiminizle eşleştirilir.
           </p>
           <Button
             className="mt-4 w-full velox-gradient text-primary-foreground"
             onClick={createInstruction}
-            disabled={creating || !depositAddress || Number(amount) < 50}
+            disabled={creating || !selectedNetwork?.configured || Number(amount) < (selectedNetwork?.minimumDeposit ?? 100)}
           >
             <Wallet />
             {creating ? 'Oluşturuluyor…' : 'Yatırım talimatı oluştur'}
@@ -206,7 +221,7 @@ function DepositTab({
                     <p className="mt-1 text-xs text-muted-foreground">{formatUSDT(receipt.amount)} • {receipt.network} • {downloadable ? 'Doğrulandı' : 'Ağ doğrulaması bekliyor'}</p>
                   </div>
                   {downloadable ? (
-                    <a href={`/api/receipts/${encodeURIComponent(receipt.receiptNumber)}?lang=${language}`} className="inline-flex items-center gap-1.5 rounded-md border border-cyan/40 px-3 py-1.5 text-xs font-medium text-cyan transition-colors hover:bg-cyan/10">
+                    <a href={`/api/receipts/${encodeURIComponent(receipt.receiptNumber)}`} className="inline-flex items-center gap-1.5 rounded-md border border-cyan/40 px-3 py-1.5 text-xs font-medium text-cyan transition-colors hover:bg-cyan/10">
                       <Download className="size-3.5" /> PDF indir
                     </a>
                   ) : (
@@ -222,10 +237,13 @@ function DepositTab({
   )
 }
 
-function WithdrawTab() {
+function WithdrawTab({ walletNetworks }: { walletNetworks: WalletNetworkConfig[] }) {
   const available = safeNumber(demoBalance.incomeBalance)
+  const [networkId, setNetworkId] = useState<WalletNetworkId>(walletNetworks[0]?.id ?? 'TON')
   const [amount, setAmount] = useState('')
   const [address, setAddress] = useState('')
+  const [memo, setMemo] = useState('')
+  const selectedNetwork = walletNetworks.find((network) => network.id === networkId) ?? walletNetworks[0]
   const n = safeNumber(amount)
   const fee = n > 0 ? Math.max(1, n * 0.01) : 0
   const receive = Math.max(0, n - fee)
@@ -235,19 +253,24 @@ function WithdrawTab() {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
       <Panel>
-        <PanelHeader title="Çekim Talebi" right={<StatusPill tone="active">TRC-20</StatusPill>} />
-        <div className="p-4">
+        <PanelHeader title="Çekim Talebi" right={<StatusPill tone="active">{selectedNetwork?.id ?? 'USDT'}</StatusPill>} />
+        <div className="space-y-4 p-4">
+          <NetworkSelector networks={walletNetworks} value={networkId} onChange={(nextNetwork) => { setNetworkId(nextNetwork); setAddress(''); setMemo('') }} />
+          <div>
           <label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-            Alıcı USDT-TRC20 adresi
+            Alıcı {selectedNetwork?.label ?? 'USDT'} adresi
           </label>
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="T ile başlayan adres"
+            placeholder={selectedNetwork?.addressPlaceholder ?? 'Cüzdan adresi'}
             className="mt-1.5 w-full rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-electric"
           />
+          </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          {selectedNetwork?.memoRequired ? <div><label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Memo / Etiket (alıcı istiyorsa)</label><input value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="Memo / Etiket" className="mt-1.5 w-full rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-electric" /></div> : null}
+
+          <div className="flex items-center justify-between">
             <label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
               Tutar (USDT)
             </label>
@@ -299,10 +322,13 @@ function WithdrawTab() {
   )
 }
 
-function AutoWithdrawTab() {
+function AutoWithdrawTab({ walletNetworks }: { walletNetworks: WalletNetworkConfig[] }) {
   const [enabled, setEnabled] = useState(false)
-  const [threshold, setThreshold] = useState('50')
+  const [networkId, setNetworkId] = useState<WalletNetworkId>(walletNetworks[0]?.id ?? 'TON')
+  const [threshold, setThreshold] = useState('100')
   const [address, setAddress] = useState('')
+  const [memo, setMemo] = useState('')
+  const selectedNetwork = walletNetworks.find((network) => network.id === networkId) ?? walletNetworks[0]
 
   return (
     <Panel className="max-w-2xl">
@@ -343,6 +369,8 @@ function AutoWithdrawTab() {
           </button>
         </div>
 
+        <div className="mt-4"><NetworkSelector networks={walletNetworks} value={networkId} onChange={(nextNetwork) => { setNetworkId(nextNetwork); setAddress(''); setMemo('') }} /></div>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
@@ -358,16 +386,17 @@ function AutoWithdrawTab() {
           </div>
           <div>
             <label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-              Hedef adres (TRC-20)
+              Hedef adres ({selectedNetwork?.id ?? 'USDT'})
             </label>
             <input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               disabled={!enabled}
-              placeholder="T ile başlayan adres"
+              placeholder={selectedNetwork?.addressPlaceholder ?? 'Cüzdan adresi'}
               className="mt-1.5 w-full rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-electric disabled:opacity-50"
             />
           </div>
+          {selectedNetwork?.memoRequired ? <div><label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Memo / Etiket (alıcı istiyorsa)</label><input value={memo} onChange={(event) => setMemo(event.target.value)} disabled={!enabled} placeholder="Memo / Etiket" className="mt-1.5 w-full rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-electric disabled:opacity-50" /></div> : null}
         </div>
 
         <Button className="mt-4 velox-gradient text-primary-foreground" disabled={!enabled}>
@@ -376,6 +405,81 @@ function AutoWithdrawTab() {
         </Button>
       </div>
     </Panel>
+  )
+}
+
+function NetworkSelector({
+  networks,
+  value,
+  onChange,
+}: {
+  networks: WalletNetworkConfig[]
+  value: WalletNetworkId
+  onChange: (network: WalletNetworkId) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = networks.find((network) => network.id === value) ?? networks[0]
+  return (
+    <div className="relative">
+      <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Ağ seçin</label>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between rounded-lg border border-border bg-elevated px-3 py-2.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:border-cyan/50 focus:border-electric"
+      >
+        <span>{selected?.label ?? 'Ağ bulunamadı'}</span>
+        <ChevronDown className={open ? 'size-4 rotate-180 transition-transform' : 'size-4 transition-transform'} />
+      </button>
+      {open ? (
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
+          {networks.map((network) => (
+            <button
+              key={network.id}
+              type="button"
+              onClick={() => { onChange(network.id); setOpen(false) }}
+              className={network.id === value
+                ? 'flex w-full items-center justify-between bg-cyan/10 px-3 py-3 text-left text-sm font-semibold text-light-cyan'
+                : 'flex w-full items-center justify-between px-3 py-3 text-left text-sm text-secondary-foreground transition-colors hover:bg-elevated'}
+            >
+              <span>{network.label}</span>
+              {network.id === value ? <Check className="size-4" /> : !network.configured ? <span className="text-[10px] text-amber-300">Yapılandırılmadı</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function CopyField({
+  label,
+  value,
+  placeholder,
+  badge,
+  copied,
+  onCopy,
+}: {
+  label: string
+  value: string | null
+  placeholder: string
+  badge?: string
+  copied: boolean
+  onCopy: () => void
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-elevated p-3">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+        <span>{label}</span>
+        {badge ? <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-rose-300">{badge}</span> : null}
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <code className="min-w-0 flex-1 break-all font-mono text-sm font-semibold leading-5 text-foreground">{value ?? placeholder}</code>
+        <Button variant="outline" size="icon-sm" aria-label={`${label} kopyala`} onClick={onCopy} disabled={!value}>
+          {copied ? <Check className="text-light-cyan" /> : <Copy />}
+        </Button>
+      </div>
+    </div>
   )
 }
 

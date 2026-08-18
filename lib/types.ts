@@ -61,7 +61,6 @@ export type OperationType =
   | 'Yeniden yatırım'
   | 'Tahakkuk'
   | 'Çekim'
-  | 'İç transfer'
 
 export interface Operation {
   id: string
@@ -82,6 +81,7 @@ export interface InvestmentReceipt {
   asset: string
   network: string
   receivingAddress: string
+  depositMemo: string | null
   transactionHash: string | null
   status: InvestmentReceiptStatus
   issuedAt: Date | string

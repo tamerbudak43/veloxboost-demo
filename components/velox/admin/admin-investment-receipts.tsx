@@ -59,13 +59,14 @@ export function AdminInvestmentReceipts({ initialReceipts }: { initialReceipts: 
                     <div className="font-medium text-foreground">{receipt.memberName} <span className="ml-2 font-mono text-xs text-muted-foreground">{receipt.receiptNumber}</span></div>
                     <p className="mt-1 text-xs text-muted-foreground">{receipt.memberEmail} • {formatUSDT(receipt.amount)} • {receipt.network} • {formatDateTime(receipt.issuedAt)}</p>
                     <p className="mt-1 max-w-xl break-all font-mono text-[11px] text-muted-foreground">Alıcı adresi: {receipt.receivingAddress}</p>
+                    {receipt.depositMemo ? <p className="mt-1 max-w-xl break-all font-mono text-[11px] text-amber-200">Memo / Etiket: {receipt.depositMemo}</p> : null}
                   </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 xl:w-[440px] xl:flex-row">
                   <input
                     value={hashes[receipt.id] ?? ''}
                     onChange={(event) => setHashes((current) => ({ ...current, [receipt.id]: event.target.value }))}
-                    placeholder="64 karakterlik işlem hash"
+                    placeholder="Seçilen ağa ait işlem hash"
                     className="min-w-0 flex-1 rounded-md border border-border bg-elevated px-3 py-2 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-electric"
                   />
                   <Button onClick={() => confirm(receipt)} disabled={busyId === receipt.id} className="velox-gradient text-primary-foreground">

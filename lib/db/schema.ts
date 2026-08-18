@@ -225,6 +225,7 @@ export const investmentReceipt = pgTable(
     asset: text('asset').notNull().default('USDT'),
     network: text('network').notNull().default('TRC20'),
     receivingAddress: text('receivingAddress').notNull(),
+    depositMemo: text('depositMemo'),
     transactionHash: text('transactionHash'),
     status: text('status').notNull().default('pending'), // pending | confirmed | rejected
     issuedAt: timestamp('issuedAt').notNull().defaultNow(),

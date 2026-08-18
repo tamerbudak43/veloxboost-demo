@@ -27,6 +27,7 @@ export type ReceiptPdfData = {
   asset: string
   network: string
   receivingAddress: string
+  depositMemo: string | null
   transactionHash: string | null
   status: string
 }
@@ -121,6 +122,7 @@ function InvestmentReceiptPdf({ data, language }: { data: ReceiptPdfData; langua
           <Row rtl={rtl} label={t('Yatırım tutarı')} value={`${data.amount} ${data.asset}`} />
           <Row rtl={rtl} label={t('Ağ')} value={data.network} />
           <Row rtl={rtl} label={t('Alıcı adresi')} value={data.receivingAddress} />
+          {data.depositMemo ? <Row rtl={rtl} label={t('Memo / Etiket')} value={data.depositMemo} compactValue /> : null}
           <Row rtl={rtl} label={t('İşlem hash')} value={data.transactionHash ?? '—'} compactValue />
         </View>
 

@@ -24,6 +24,7 @@ export async function GET(
       asset: investmentReceipt.asset,
       network: investmentReceipt.network,
       receivingAddress: investmentReceipt.receivingAddress,
+      depositMemo: investmentReceipt.depositMemo,
       transactionHash: investmentReceipt.transactionHash,
       status: investmentReceipt.status,
       issuedAt: investmentReceipt.issuedAt,

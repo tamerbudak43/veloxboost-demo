@@ -130,7 +130,6 @@ export const demoOperations: Operation[] = [
   { id: 'o1', userId: demoUser.id, contractId: 'c1', operationType: 'Tahakkuk', amount: 10.8883, poolName: 'Dahili ağ', createdAt: minutesAgo(30) },
   { id: 'o2', userId: demoUser.id, contractId: 'c1', operationType: 'Yatırım', amount: 650, poolName: 'Arbitraj havuzu', createdAt: minutesAgo(1440) },
   { id: 'o3', userId: demoUser.id, contractId: 'c2', operationType: 'Yeniden yatırım', amount: 82, poolName: 'Arbitraj havuzu', createdAt: minutesAgo(2880) },
-  { id: 'o4', userId: demoUser.id, contractId: null, operationType: 'İç transfer', amount: 21.496, poolName: 'Gelir bakiyesi', createdAt: minutesAgo(4320) },
 ]
 
 export const demoContracts: InvestmentContract[] = [

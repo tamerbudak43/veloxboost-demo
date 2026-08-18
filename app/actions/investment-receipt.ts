@@ -6,19 +6,10 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { investmentReceipt, member } from '@/lib/db/schema'
 import type { InvestmentReceipt, InvestmentReceiptStatus } from '@/lib/types'
+import { getWalletNetwork } from '@/lib/wallet/network-config'
 
-function normalizeReceiptStatus(status: string): InvestmentReceiptStatus {
-  return status === 'confirmed' || status === 'rejected' ? status : 'pending'
-}
-
-function normalizeReceipt<T extends { status: string }>(record: T): Omit<T, 'status'> & { status: InvestmentReceiptStatus } {
-  return { ...record, status: normalizeReceiptStatus(record.status) }
-}
-
-function getReceivingAddress() {
-  const address = process.env.VELOX_USDT_TRC20_ADDRESS?.trim()
-  if (!address) throw new Error('USDT-TRC20 yatırım adresi henüz yapılandırılmadı.')
-  return address
+function typedReceipt<T extends { status: string }>(record: T) {
+  return { ...record, status: record.status as InvestmentReceiptStatus }
 }
 
 function createReceiptNumber() {
@@ -37,10 +28,15 @@ async function currentUserId() {
  * Creates a pending instruction, not a completed payment receipt. A document
  * becomes downloadable only after the deposit is verified on-chain/admin side.
  */
-export async function createInvestmentInstruction(rawAmount: number): Promise<InvestmentReceipt> {
+export async function createInvestmentInstruction(rawAmount: number, rawNetwork: string): Promise<InvestmentReceipt> {
+  const network = getWalletNetwork(rawNetwork)
+  if (!network) throw new Error('Desteklenmeyen cüzdan ağı seçildi.')
+  if (!network.depositAddress || (network.memoRequired && !network.depositMemo)) {
+    throw new Error(`${network.label} yatırım bilgileri henüz yönetici tarafından yapılandırılmadı.`)
+  }
   const amount = Number(rawAmount)
-  if (!Number.isFinite(amount) || amount < 50) {
-    throw new Error('Minimum yatırım tutarı 50 USDT olmalıdır.')
+  if (!Number.isFinite(amount) || amount < network.minimumDeposit) {
+    throw new Error(`Minimum yatırım tutarı ${network.minimumDeposit} USDT olmalıdır.`)
   }
 
   const userId = await currentUserId()
@@ -50,12 +46,14 @@ export async function createInvestmentInstruction(rawAmount: number): Promise<In
       userId,
       receiptNumber: createReceiptNumber(),
       amount: amount.toFixed(4),
-      receivingAddress: getReceivingAddress(),
+      network: network.id,
+      receivingAddress: network.depositAddress,
+      depositMemo: network.depositMemo,
       status: 'pending',
     })
     .returning()
 
-  return normalizeReceipt(record)
+  return typedReceipt(record)
 }
 
 export async function getMyInvestmentReceipts(): Promise<InvestmentReceipt[]> {
@@ -65,7 +63,7 @@ export async function getMyInvestmentReceipts(): Promise<InvestmentReceipt[]> {
     .from(investmentReceipt)
     .where(eq(investmentReceipt.userId, userId))
     .orderBy(desc(investmentReceipt.issuedAt))
-  return records.map(normalizeReceipt)
+  return records.map(typedReceipt)
 }
 
 export type AdminInvestmentReceipt = InvestmentReceipt & {
@@ -88,6 +86,7 @@ export async function getPendingInvestmentReceipts(): Promise<AdminInvestmentRec
       asset: investmentReceipt.asset,
       network: investmentReceipt.network,
       receivingAddress: investmentReceipt.receivingAddress,
+      depositMemo: investmentReceipt.depositMemo,
       transactionHash: investmentReceipt.transactionHash,
       status: investmentReceipt.status,
       issuedAt: investmentReceipt.issuedAt,
@@ -99,7 +98,7 @@ export async function getPendingInvestmentReceipts(): Promise<AdminInvestmentRec
     .innerJoin(member, eq(member.userId, investmentReceipt.userId))
     .where(eq(investmentReceipt.status, 'pending'))
     .orderBy(desc(investmentReceipt.issuedAt))
-  return records.map(normalizeReceipt)
+  return records.map(typedReceipt)
 }
 
 /** Admin-only confirmation. The blockchain transaction hash is required so
@@ -125,11 +124,11 @@ export async function confirmInvestmentReceipt(
     return { ok: false, error: 'Bu işlem için yönetici yetkisi gerekir.' }
   }
 
-  // Wallets and explorers commonly display the hash with a 0x prefix. Keep a
-  // normalized 64-character value in the database while accepting either form.
-  const hash = transactionHash.trim().replace(/^0x/i, '')
-  if (!/^[a-fA-F0-9]{64}$/.test(hash)) {
-    return { ok: false, error: '0x öneki isteğe bağlı olacak şekilde geçerli 64 karakterlik işlem hash değeri girin.' }
+  // Supported chains use either hexadecimal or Base64/Base64URL transaction
+  // identifiers. Final chain verification remains an explicit admin step.
+  const hash = transactionHash.trim()
+  if (!/^[A-Za-z0-9+/=_:-]{32,128}$/.test(hash)) {
+    return { ok: false, error: 'Seçilen ağa ait geçerli işlem hash değerini girin.' }
   }
 
   const [updated] = await db
@@ -139,5 +138,5 @@ export async function confirmInvestmentReceipt(
     .returning()
 
   if (!updated) return { ok: false, error: 'Bekleyen yatırım talimatı bulunamadı veya daha önce işleme alındı.' }
-  return { ok: true, receipt: normalizeReceipt(updated) }
+  return { ok: true, receipt: typedReceipt(updated) }
 }

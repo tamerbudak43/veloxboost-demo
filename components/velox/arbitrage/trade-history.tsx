@@ -253,7 +253,7 @@ function OperationsTable({ operations }: { operations: Operation[] }) {
       <tbody>
         {rows.map((o) => {
           const amount = safeNumber(o?.amount)
-          const positive = ['Yatırım', 'Yeniden yatırım', 'Tahakkuk', 'İç transfer'].includes(
+          const positive = ['Yatırım', 'Yeniden yatırım', 'Tahakkuk'].includes(
             String(o?.operationType),
           )
           return (
