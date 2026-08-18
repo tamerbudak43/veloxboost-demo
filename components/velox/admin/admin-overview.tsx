@@ -25,7 +25,16 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
     const init = () => {
       const maps = (window as any).google?.maps
       if (!maps || !mapRef.current) return
-      const map = new maps.Map(mapRef.current, { center: { lat: 43, lng: 45 }, zoom: 3, disableDefaultUI: true, zoomControl: true, styles: [{ elementType: 'geometry', stylers: [{ color: '#071421' }] }, { elementType: 'labels.text.fill', stylers: [{ color: '#8ca7c8' }] }, { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#06111d' }] }] })
+      const map = new maps.Map(mapRef.current, { center: { lat: 42, lng: 42 }, zoom: 2, disableDefaultUI: true, zoomControl: true, styles: [
+        { elementType: 'geometry', stylers: [{ color: '#0b1624' }] },
+        { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#122238' }] },
+        { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#4c719d' }, { weight: 1.1 }, { visibility: 'on' }] },
+        { featureType: 'administrative.province', elementType: 'geometry.stroke', stylers: [{ color: '#294968' }, { visibility: 'on' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#06111e' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#d9e7f6' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1624' }, { weight: 3 }] },
+        { featureType: 'road', elementType: 'all', stylers: [{ visibility: 'off' }] },
+      ] })
       countries.forEach((item) => { const position = COUNTRY_COORDINATES[item.code]; if (position) new maps.Marker({ position, map, title: `${item.country}: ${item.members} üye · ${formatUSDT(item.deposits, 0)}` }) })
       setReady(true)
     }
