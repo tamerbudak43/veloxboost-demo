@@ -7,6 +7,9 @@ import { Loader2, ArrowRight, CheckCircle2, XCircle, UserPlus, LogIn } from 'luc
 import { authClient } from '@/lib/auth-client'
 import { createMemberProfile, validateReferralCode } from '@/app/actions/member'
 import { VeloxLogo } from '@/components/velox/velox-logo'
+import { LanguageProvider, useLanguage } from '@/components/velox/language-context'
+import { LanguageSwitcher } from '@/components/velox/language-switcher'
+import { getAuthTranslations } from '@/components/velox/auth/auth-translations'
 import { cn } from '@/lib/utils'
 
 type Mode = 'sign-in' | 'sign-up'
@@ -18,8 +21,24 @@ export function AuthForm({
   mode: Mode
   initialReferral?: string
 }) {
+  return (
+    <LanguageProvider>
+      <LocalizedAuthForm mode={mode} initialReferral={initialReferral} />
+    </LanguageProvider>
+  )
+}
+
+function LocalizedAuthForm({
+  mode,
+  initialReferral,
+}: {
+  mode: Mode
+  initialReferral: string
+}) {
   const router = useRouter()
   const isSignUp = mode === 'sign-up'
+  const { language, direction } = useLanguage()
+  const copy = getAuthTranslations(language)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -63,7 +82,7 @@ export function AuthForm({
       if (isSignUp) {
         const { error: signUpError } = await authClient.signUp.email({ email, password, name })
         if (signUpError) {
-          setError(signUpError.message ?? 'Kayıt başarısız oldu.')
+          setError(signUpError.message ?? copy.signUpFailed)
           setLoading(false)
           return
         }
@@ -72,7 +91,7 @@ export function AuthForm({
       } else {
         const { error: signInError } = await authClient.signIn.email({ email, password })
         if (signInError) {
-          setError(signInError.message ?? 'Giriş başarısız oldu.')
+          setError(signInError.message ?? copy.signInFailed)
           setLoading(false)
           return
         }
@@ -80,23 +99,24 @@ export function AuthForm({
       router.push('/dashboard')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu.')
+      setError(err instanceof Error ? err.message : copy.genericError)
       setLoading(false)
     }
   }
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md" dir={direction}>
+      <div className="mb-4 flex justify-end">
+        <LanguageSwitcher />
+      </div>
       <div className="mb-8 flex flex-col items-center gap-4 text-center">
         <VeloxLogo size={30} />
         <div>
           <h1 className="text-xl font-semibold text-foreground">
-            {isSignUp ? 'VELOX ağına katıl' : 'Tekrar hoş geldin'}
+            {isSignUp ? copy.signUpTitle : copy.signInTitle}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isSignUp
-              ? 'Hesabını oluştur ve arbitraj terminaline eriş.'
-              : 'Hesabına giriş yap ve kaldığın yerden devam et.'}
+            {isSignUp ? copy.signUpSubtitle : copy.signInSubtitle}
           </p>
         </div>
       </div>
@@ -106,19 +126,19 @@ export function AuthForm({
         className="rounded-xl border border-border bg-card p-6 shadow-lg shadow-black/20"
       >
         {isSignUp && (
-          <Field label="Ad Soyad" htmlFor="name">
+          <Field label={copy.fullName} htmlFor="name">
             <input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              placeholder="Adınız"
+              placeholder={copy.namePlaceholder}
               className="velox-input"
             />
           </Field>
         )}
 
-        <Field label="E-posta" htmlFor="email">
+        <Field label={copy.email} htmlFor="email">
           <input
             id="email"
             type="email"
@@ -130,7 +150,15 @@ export function AuthForm({
           />
         </Field>
 
-        <Field label="Parola" htmlFor="password">
+        <Field
+          label={copy.password}
+          htmlFor="password"
+          hint={!isSignUp ? (
+            <Link href="/forgot-password" className="font-medium text-electric hover:underline">
+              {copy.forgotPassword}
+            </Link>
+          ) : null}
+        >
           <input
             id="password"
             type="password"
@@ -138,27 +166,27 @@ export function AuthForm({
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
-            placeholder="En az 8 karakter"
+            placeholder={copy.passwordPlaceholder}
             className="velox-input"
           />
         </Field>
 
         {isSignUp && (
           <Field
-            label="Referans kodu (opsiyonel)"
+            label={copy.referral}
             htmlFor="referral"
             hint={
               refState === 'checking' ? (
                 <span className="inline-flex items-center gap-1 text-muted-foreground">
-                  <Loader2 className="size-3 animate-spin" /> Kontrol ediliyor
+                  <Loader2 className="size-3 animate-spin" /> {copy.checking}
                 </span>
               ) : refState === 'valid' ? (
                 <span className="inline-flex items-center gap-1 text-success">
-                  <CheckCircle2 className="size-3" /> {refSponsor} tarafından davet
+                  <CheckCircle2 className="size-3" /> {copy.invitedBy.replace('{name}', refSponsor ?? '')}
                 </span>
               ) : refState === 'invalid' ? (
                 <span className="inline-flex items-center gap-1 text-destructive">
-                  <XCircle className="size-3" /> Kod bulunamadı
+                  <XCircle className="size-3" /> {copy.codeNotFound}
                 </span>
               ) : null
             }
@@ -168,7 +196,7 @@ export function AuthForm({
               value={referral}
               onChange={(e) => setReferral(e.target.value.toUpperCase())}
               onBlur={(e) => checkReferral(e.target.value)}
-              placeholder="Örn. ADAX12"
+              placeholder={copy.referralPlaceholder}
               className="velox-input font-mono uppercase"
             />
           </Field>
@@ -194,7 +222,7 @@ export function AuthForm({
           ) : (
             <LogIn className="size-4" />
           )}
-          {isSignUp ? 'Hesap oluştur' : 'Giriş yap'}
+          {isSignUp ? copy.createAccount : copy.signIn}
           {!loading && <ArrowRight className="size-4" />}
         </button>
       </form>
@@ -202,16 +230,16 @@ export function AuthForm({
       <p className="mt-5 text-center text-sm text-muted-foreground">
         {isSignUp ? (
           <>
-            Zaten hesabın var mı?{' '}
+            {copy.alreadyAccount}{' '}
             <Link href="/sign-in" className="font-medium text-electric hover:underline">
-              Giriş yap
+              {copy.signIn}
             </Link>
           </>
         ) : (
           <>
-            Hesabın yok mu?{' '}
+            {copy.noAccount}{' '}
             <Link href="/sign-up" className="font-medium text-electric hover:underline">
-              Kayıt ol
+              {copy.register}
             </Link>
           </>
         )}
