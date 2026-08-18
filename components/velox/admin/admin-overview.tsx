@@ -14,8 +14,6 @@ const COUNTRY_DOTS: Record<string, { x: number; y: number }> = {
 }
 const COUNTRY_COLORS = ['#22d3ee', '#3b82f6', '#fbbf24', '#d946ef', '#34d399', '#fb7185', '#a78bfa', '#f97316']
 
-const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = { TR: { lat: 39, lng: 35 }, DE: { lat: 51, lng: 10 }, AZ: { lat: 40.1, lng: 47.6 }, KZ: { lat: 48, lng: 67 }, AE: { lat: 24.3, lng: 54.4 }, RU: { lat: 61, lng: 105 }, UZ: { lat: 41.4, lng: 64.6 }, GE: { lat: 42.3, lng: 43.3 } }
-
 function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
@@ -35,7 +33,7 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
         { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1624' }, { weight: 3 }] },
         { featureType: 'road', elementType: 'all', stylers: [{ visibility: 'off' }] },
       ] })
-      countries.forEach((item) => { const position = COUNTRY_COORDINATES[item.code]; if (position) new maps.Marker({ position, map, title: `${item.country}: ${item.members} üye · ${formatUSDT(item.deposits, 0)}` }) })
+      countries.forEach((item) => { const marker = new maps.Marker({ position: { lat: item.lat, lng: item.lng }, map, title: `${item.city}, ${item.country}: ${item.members} üye · ${formatUSDT(item.deposits, 0)}` }); const info = new maps.InfoWindow({ content: `<div style="color:#10233a;font:500 13px Arial"><strong>${item.city}, ${item.country}</strong><br/>Demo üye: ${item.members}<br/>Demo hacim: ${formatUSDT(item.deposits, 0)}</div>` }); marker.addListener('click', () => info.open({ map, anchor: marker })) })
       setReady(true)
     }
     if ((window as any).google?.maps) { init(); return }
@@ -57,7 +55,7 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
       })}
     </svg>}
     {key && !ready ? <p className="mt-2 text-[11px] text-muted-foreground">Google haritası yükleniyor…</p> : null}
-    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">{countries.map((item, index) => <div key={item.code} className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><i className="size-2 shrink-0 rounded-full" style={{ backgroundColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length] }} />{item.country}</span><span className="font-mono text-foreground">{item.members} · {formatUSDT(item.deposits, 0)}</span></div>)}</div>
+    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">{countries.map((item, index) => <div key={item.code} className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><i className="size-2 shrink-0 rounded-full" style={{ backgroundColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length] }} />{item.city}, {item.country}</span><span className="font-mono text-foreground">{item.members} · {formatUSDT(item.deposits, 0)}</span></div>)}</div>
   </div>
 }
 
