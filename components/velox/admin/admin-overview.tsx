@@ -14,8 +14,9 @@ const COUNTRY_DOTS: Record<string, { x: number; y: number }> = {
 }
 const COUNTRY_COLORS = ['#22d3ee', '#3b82f6', '#fbbf24', '#d946ef', '#34d399', '#fb7185', '#a78bfa', '#f97316']
 
-function CountryWorldMap({ cities }: { cities?: DemoCityReport[] }) {
-  const locationRows = cities ?? []
+const CITY_OPTIONS: Record<string, Array<{ city: string; lat: number; lng: number }>> = { TR: [{ city: 'Ankara', lat: 39.93, lng: 32.86 }, { city: 'İstanbul', lat: 41.01, lng: 28.98 }, { city: 'İzmir', lat: 38.42, lng: 27.14 }, { city: 'Antalya', lat: 36.9, lng: 30.71 }, { city: 'Bursa', lat: 40.2, lng: 29.06 }], DE: [{ city: 'Berlin', lat: 52.52, lng: 13.4 }, { city: 'Köln', lat: 50.94, lng: 6.96 }], AZ: [{ city: 'Bakü', lat: 40.41, lng: 49.87 }], KZ: [{ city: 'Almatı', lat: 43.22, lng: 76.85 }], AE: [{ city: 'Dubai', lat: 25.2, lng: 55.27 }], RU: [{ city: 'Moskova', lat: 55.76, lng: 37.62 }], UZ: [{ city: 'Taşkent', lat: 41.3, lng: 69.24 }], GE: [{ city: 'Tiflis', lat: 41.72, lng: 44.83 }] }
+function CountryWorldMap({ cities, countries = [] }: { cities?: DemoCityReport[]; countries?: DemoCityReport[] }) {
+  const locationRows = cities?.length ? cities : countries.flatMap((country) => { const places = CITY_OPTIONS[country.code] ?? []; return places.map((place, index) => ({ ...country, ...place, members: index < country.members ? 1 : 0, deposits: index < country.members ? country.deposits / Math.max(country.members, 1) : 0 })).filter((row) => row.members > 0) })
   const mapRef = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -69,7 +70,7 @@ function DistributionDonut({ current }: { current?: DemoDailyReport }) {
   const segments = values.map((value, index) => { const start = cursor; cursor += (value / total) * 100; return `${colors[index]} ${start}% ${cursor}%` })
   return <div className="rounded-lg border border-border bg-surface p-4">
     <h3 className="text-sm font-medium">Bugünkü dağılım</h3>
-    <div className="mt-3 flex items-center gap-5"><div className="grid size-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${segments.join(', ')})` }}><div className="grid size-20 place-items-center rounded-full bg-surface text-center"><span className="text-[10px] text-muted-foreground">Toplam</span><span className="font-mono text-xs font-semibold">{formatUSDT(total, 0)}</span></div></div><div className="space-y-2 text-[11px]">{labels.map((label, index) => <div key={label} className="flex items-center justify-between gap-5"><span className="flex items-center gap-1.5 text-muted-foreground"><i className="size-2 rounded-full" style={{ backgroundColor: colors[index] }} />{label}</span><span className="font-mono text-foreground">{formatUSDT(values[index], 2)}</span></div>)}</div></div>
+    <div className="mt-4 flex flex-col items-center"><div className="grid size-44 shrink-0 place-items-center rounded-full shadow-[0_0_32px_rgba(34,211,238,.12)]" style={{ background: `conic-gradient(${segments.join(', ')})` }}><div className="grid size-32 place-items-center rounded-full bg-surface text-center"><span className="text-xs text-muted-foreground">Toplam</span><span className="font-mono text-base font-semibold">{formatUSDT(total, 0)}</span></div></div><div className="mt-5 w-full divide-y divide-border/60 rounded-md border border-border/60 px-3 text-xs">{labels.map((label, index) => <div key={label} className="flex items-center justify-between gap-5 py-2.5"><span className="flex items-center gap-2 text-muted-foreground"><i className="size-2.5 rounded-full" style={{ backgroundColor: colors[index] }} />{label}</span><span className="font-mono font-semibold text-foreground">{formatUSDT(values[index], 2)}</span></div>)}</div></div>
   </div>
 }
 
@@ -114,7 +115,7 @@ function KpiCard({
   )
 }
 
-function DemoReportOverview({ daily, cities, endingCash }: { daily: DemoDailyReport[]; cities: DemoCityReport[]; endingCash: number }) {
+function DemoReportOverview({ daily, cities, countries, endingCash }: { daily: DemoDailyReport[]; cities?: DemoCityReport[]; countries?: DemoCityReport[]; endingCash: number }) {
   const current = daily.at(-1)
   const chartMax = Math.max(...daily.flatMap((row) => [row.deposits, row.memberAccrual, row.referralExpense, row.networkIncome]), 1)
 
@@ -153,12 +154,12 @@ function DemoReportOverview({ daily, cities, endingCash }: { daily: DemoDailyRep
         </div>
         <div className="rounded-lg border border-border bg-surface p-4"><h3 className="text-sm font-medium">Ağ büyüme hızı</h3><div className="mt-4 space-y-3">{daily.map((row, index) => { const previous = daily[index - 1]?.cumulativeMembers ?? 0; const growth = previous ? ((row.cumulativeMembers - previous) / previous) * 100 : 0; return <div key={row.date} className="flex items-center justify-between gap-3 text-xs"><span className="text-muted-foreground">{row.date}</span><span>{row.registrations} yeni · {row.cumulativeMembers} ağ</span><span className="font-mono text-light-cyan">{index === 0 ? 'Başlangıç' : `%${formatNumber(growth, 1)}`}</span></div> })}</div></div>
       </div>
-      <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-2"><DistributionDonut current={current} /><CountryWorldMap cities={cities} /></div>
+      <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-2"><DistributionDonut current={current} /><CountryWorldMap cities={cities} countries={countries} /></div>
     </Panel>
   )
 }
 
-export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; cities: DemoCityReport[]; endingCash: number } }) {
+export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; cities?: DemoCityReport[]; countries?: DemoCityReport[]; endingCash: number } }) {
   const queue = safeArray<WithdrawalRequest>(withdrawals)
     .filter((w) => w?.status === 'pending')
     .slice(0, 4)
@@ -214,7 +215,7 @@ export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi
         />
       </div>
 
-      <DemoReportOverview daily={demoReports.daily} cities={demoReports.cities} endingCash={demoReports.endingCash} />
+      <DemoReportOverview daily={demoReports.daily} cities={demoReports.cities} countries={demoReports.countries} endingCash={demoReports.endingCash} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Volume trend */}
