@@ -29,26 +29,42 @@ export type DemoDailyReport = {
 export type DemoCountryReport = {
   country: string
   code: string
+  city: string
+  lat: number
+  lng: number
   members: number
   deposits: number
 }
 
+export type DemoCityReport = DemoCountryReport
+
 // Phase-1 test members do not represent real users or real locations. This
 // deterministic list exists solely to make the global-demo dashboard readable.
 const DEMO_COUNTRY_ROTATION = [
-  { country: 'Türkiye', code: 'TR' },
-  { country: 'Almanya', code: 'DE' },
-  { country: 'Azerbaycan', code: 'AZ' },
-  { country: 'Kazakistan', code: 'KZ' },
-  { country: 'Birleşik Arap Emirlikleri', code: 'AE' },
-  { country: 'Rusya', code: 'RU' },
-  { country: 'Özbekistan', code: 'UZ' },
-  { country: 'Gürcistan', code: 'GE' },
+  { country: 'Türkiye', code: 'TR', city: 'Ankara', lat: 39.9334, lng: 32.8597 },
+  { country: 'Almanya', code: 'DE', city: 'Berlin', lat: 52.52, lng: 13.405 },
+  { country: 'Azerbaycan', code: 'AZ', city: 'Bakü', lat: 40.4093, lng: 49.8671 },
+  { country: 'Kazakistan', code: 'KZ', city: 'Almatı', lat: 43.222, lng: 76.8512 },
+  { country: 'Birleşik Arap Emirlikleri', code: 'AE', city: 'Dubai', lat: 25.2048, lng: 55.2708 },
+  { country: 'Rusya', code: 'RU', city: 'Moskova', lat: 55.7558, lng: 37.6173 },
+  { country: 'Özbekistan', code: 'UZ', city: 'Taşkent', lat: 41.2995, lng: 69.2401 },
+  { country: 'Gürcistan', code: 'GE', city: 'Tiflis', lat: 41.7151, lng: 44.8271 },
 ] as const
+
+const DEMO_CITY_ROTATION: Record<string, Array<{ city: string; lat: number; lng: number }>> = {
+  TR: [{ city: 'Ankara', lat: 39.9334, lng: 32.8597 }, { city: 'İstanbul', lat: 41.0082, lng: 28.9784 }, { city: 'İzmir', lat: 38.4237, lng: 27.1428 }, { city: 'Antalya', lat: 36.8969, lng: 30.7133 }, { city: 'Bursa', lat: 40.195, lng: 29.06 }],
+  DE: [{ city: 'Berlin', lat: 52.52, lng: 13.405 }, { city: 'Köln', lat: 50.9375, lng: 6.9603 }], AZ: [{ city: 'Bakü', lat: 40.4093, lng: 49.8671 }], KZ: [{ city: 'Almatı', lat: 43.222, lng: 76.8512 }, { city: 'Astana', lat: 51.1694, lng: 71.4491 }], AE: [{ city: 'Dubai', lat: 25.2048, lng: 55.2708 }, { city: 'Abu Dabi', lat: 24.4539, lng: 54.3773 }], RU: [{ city: 'Moskova', lat: 55.7558, lng: 37.6173 }], UZ: [{ city: 'Taşkent', lat: 41.2995, lng: 69.2401 }], GE: [{ city: 'Tiflis', lat: 41.7151, lng: 44.8271 }],
+}
 
 function demoCountryFor(userId: string) {
   const serial = Number(userId.match(/(\d+)$/)?.[1] ?? 0)
   return DEMO_COUNTRY_ROTATION[Math.max(0, serial - 1) % DEMO_COUNTRY_ROTATION.length]
+}
+function demoCityFor(userId: string) {
+  const serial = Number(userId.match(/(\d+)$/)?.[1] ?? 1)
+  const country = demoCountryFor(userId)
+  const cities = DEMO_CITY_ROTATION[country.code]
+  return { ...country, ...cities[Math.floor((serial - 1) / DEMO_COUNTRY_ROTATION.length) % cities.length] }
 }
 
 export type DemoPaymentDetail = {
@@ -118,5 +134,8 @@ export async function loadDemoReports() {
     countryMap.set(identity.code, current)
   }
   const countries = [...countryMap.values()].sort((a, b) => b.deposits - a.deposits)
-  return { daily, payments, totals, countries, endingCash: daily.at(-1)?.closingCash ?? 0 }
+  const cityMap = new Map<string, DemoCityReport>()
+  for (const item of members) { const identity = demoCityFor(item.userId); const key = `${identity.code}-${identity.city}`; const current = cityMap.get(key) ?? { ...identity, members: 0, deposits: 0 }; current.members += 1; current.deposits += safeNumber(item.personalVolume); cityMap.set(key, current) }
+  const cities = [...cityMap.values()].sort((a, b) => b.deposits - a.deposits)
+  return { daily, payments, totals, countries, cities, endingCash: daily.at(-1)?.closingCash ?? 0 }
 }
