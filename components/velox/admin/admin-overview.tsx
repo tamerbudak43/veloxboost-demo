@@ -5,7 +5,43 @@ import { Users, ArrowUpRight, ArrowDownRight, Waves, TrendingUp, Clock, FileDown
 import { Panel, StatusPill } from '@/components/velox/primitives'
 import { formatUSDT, formatNumber, percentOf, safeArray, safeNumber } from '@/lib/format'
 import type { AdminKpi, WithdrawalRequest } from '@/lib/types'
-import type { DemoDailyReport } from '@/lib/services/demo-report.service'
+import type { DemoCountryReport, DemoDailyReport } from '@/lib/services/demo-report.service'
+
+const COUNTRY_DOTS: Record<string, { x: number; y: number }> = {
+  TR: { x: 59, y: 46 }, DE: { x: 51, y: 36 }, AZ: { x: 63, y: 44 }, KZ: { x: 69, y: 39 },
+  AE: { x: 62, y: 54 }, RU: { x: 67, y: 27 }, UZ: { x: 66, y: 45 }, GE: { x: 61, y: 42 },
+}
+const COUNTRY_COLORS = ['#22d3ee', '#3b82f6', '#fbbf24', '#d946ef', '#34d399', '#fb7185', '#a78bfa', '#f97316']
+
+function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
+  const max = Math.max(...countries.map((item) => item.deposits), 1)
+  return <div className="rounded-lg border border-border bg-surface p-4">
+    <div className="flex items-center justify-between"><h3 className="text-sm font-medium">Demo kayıt ülkeleri</h3><span className="text-[10px] text-amber-200">Sentetik konumlar</span></div>
+    <svg viewBox="0 0 100 62" className="mt-3 w-full" role="img" aria-label="Demo ülke dağılımı dünya haritası">
+      <path d="M5 18l10-7 12 2 5 8-5 7-12 1-7 7-5-5 3-8zM32 10l8 3 3 8-4 6-5-4zM44 15l15-5 14 3 10 8-3 6-10 1-5 7-12-3-7-8zM58 36l9 2 6 11-5 10-7-4-4-10zM78 40l11 3 7 8-4 7-10-2-6-8z" fill="currentColor" className="text-background" stroke="currentColor" strokeWidth=".7" opacity=".95" />
+      <path d="M5 18l10-7 12 2 5 8-5 7-12 1-7 7-5-5 3-8zM32 10l8 3 3 8-4 6-5-4zM44 15l15-5 14 3 10 8-3 6-10 1-5 7-12-3-7-8zM58 36l9 2 6 11-5 10-7-4-4-10zM78 40l11 3 7 8-4 7-10-2-6-8z" fill="none" stroke="#1e3a5f" strokeWidth=".5" />
+      {countries.map((item, index) => {
+        const point = COUNTRY_DOTS[item.code]
+        if (!point) return null
+        return <g key={item.code}><circle cx={point.x} cy={point.y} r={2 + (item.deposits / max) * 2.4} fill={COUNTRY_COLORS[index % COUNTRY_COLORS.length]} opacity=".88" /><text x={point.x + 2.5} y={point.y - 2} fill="#e5eefc" fontSize="3">{item.code}</text></g>
+      })}
+    </svg>
+    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">{countries.map((item, index) => <div key={item.code} className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><i className="size-2 shrink-0 rounded-full" style={{ backgroundColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length] }} />{item.country}</span><span className="font-mono text-foreground">{item.members} · {formatUSDT(item.deposits, 0)}</span></div>)}</div>
+  </div>
+}
+
+function DistributionDonut({ current }: { current?: DemoDailyReport }) {
+  const values = [current?.memberAccrual ?? 0, current?.referralExpense ?? 0, current?.networkIncome ?? 0, current?.cashback ?? 0, current?.automaticPayments ?? 0]
+  const labels = ['Yatırım kârı', 'Referral %6', 'Network', 'Cashback', 'Otomatik çekim']
+  const colors = ['#22d3ee', '#fbbf24', '#e879f9', '#34d399', '#3b82f6']
+  const total = Math.max(values.reduce((sum, value) => sum + value, 0), 1)
+  let cursor = 0
+  const segments = values.map((value, index) => { const start = cursor; cursor += (value / total) * 100; return `${colors[index]} ${start}% ${cursor}%` })
+  return <div className="rounded-lg border border-border bg-surface p-4">
+    <h3 className="text-sm font-medium">Bugünkü dağılım</h3>
+    <div className="mt-3 flex items-center gap-5"><div className="grid size-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${segments.join(', ')})` }}><div className="grid size-20 place-items-center rounded-full bg-surface text-center"><span className="text-[10px] text-muted-foreground">Toplam</span><span className="font-mono text-xs font-semibold">{formatUSDT(total, 0)}</span></div></div><div className="space-y-2 text-[11px]">{labels.map((label, index) => <div key={label} className="flex items-center justify-between gap-5"><span className="flex items-center gap-1.5 text-muted-foreground"><i className="size-2 rounded-full" style={{ backgroundColor: colors[index] }} />{label}</span><span className="font-mono text-foreground">{formatUSDT(values[index], 2)}</span></div>)}</div></div>
+  </div>
+}
 
 function KpiCard({
   label,
@@ -48,7 +84,7 @@ function KpiCard({
   )
 }
 
-function DemoReportOverview({ daily, endingCash }: { daily: DemoDailyReport[]; endingCash: number }) {
+function DemoReportOverview({ daily, countries, endingCash }: { daily: DemoDailyReport[]; countries: DemoCountryReport[]; endingCash: number }) {
   const current = daily.at(-1)
   const chartMax = Math.max(...daily.flatMap((row) => [row.deposits, row.memberAccrual, row.referralExpense, row.networkIncome]), 1)
 
@@ -67,11 +103,14 @@ function DemoReportOverview({ daily, endingCash }: { daily: DemoDailyReport[]; e
         </div>
       </div>
 
-      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Kasa açılış</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(current?.openingCash ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Bugün giriş</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(current?.deposits ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Yatırım kâr dağıtımı</p><p className="mt-1 font-mono text-lg font-semibold text-light-cyan">{formatUSDT(current?.memberAccrual ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Referral %6</p><p className="mt-1 font-mono text-lg font-semibold text-amber-300">{formatUSDT(current?.referralExpense ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Network geliri</p><p className="mt-1 font-mono text-lg font-semibold text-fuchsia-300">{formatUSDT(current?.networkIncome ?? 0, 2)}</p></div>
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cashback</p><p className="mt-1 font-mono text-lg font-semibold text-emerald-300">{formatUSDT(current?.cashback ?? 0, 2)}</p></div>
+        <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Otomatik çekim</p><p className="mt-1 font-mono text-lg font-semibold text-electric">{formatUSDT(current?.automaticPayments ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net gün K/Z</p><p className="mt-1 font-mono text-lg font-semibold text-light-cyan">{formatUSDT(current?.profitLoss ?? 0, 2)}</p></div>
         <div className="rounded-lg bg-surface p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Kasa devir</p><p className="mt-1 font-mono text-lg font-semibold">{formatUSDT(endingCash, 2)}</p></div>
       </div>
@@ -84,16 +123,27 @@ function DemoReportOverview({ daily, endingCash }: { daily: DemoDailyReport[]; e
         </div>
         <div className="rounded-lg border border-border bg-surface p-4"><h3 className="text-sm font-medium">Ağ büyüme hızı</h3><div className="mt-4 space-y-3">{daily.map((row, index) => { const previous = daily[index - 1]?.cumulativeMembers ?? 0; const growth = previous ? ((row.cumulativeMembers - previous) / previous) * 100 : 0; return <div key={row.date} className="flex items-center justify-between gap-3 text-xs"><span className="text-muted-foreground">{row.date}</span><span>{row.registrations} yeni · {row.cumulativeMembers} ağ</span><span className="font-mono text-light-cyan">{index === 0 ? 'Başlangıç' : `%${formatNumber(growth, 1)}`}</span></div> })}</div></div>
       </div>
+      <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-2"><DistributionDonut current={current} /><CountryWorldMap countries={countries} /></div>
     </Panel>
   )
 }
 
-export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; endingCash: number } }) {
+export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi; withdrawals: WithdrawalRequest[]; demoReports: { daily: DemoDailyReport[]; countries: DemoCountryReport[]; endingCash: number } }) {
   const queue = safeArray<WithdrawalRequest>(withdrawals)
     .filter((w) => w?.status === 'pending')
     .slice(0, 4)
 
-  const utilization = percentOf(kpi.totalWithdrawals, kpi.totalDeposits)
+  const latestDemo = demoReports.daily.at(-1)
+  const demoTotals = demoReports.daily.reduce((total, row) => ({
+    deposits: total.deposits + row.deposits,
+    withdrawals: total.withdrawals + row.automaticPayments,
+  }), { deposits: 0, withdrawals: 0 })
+  const hasDemoFinance = demoReports.daily.length > 0
+  const totalDeposits = hasDemoFinance ? demoTotals.deposits : kpi.totalDeposits
+  const totalWithdrawals = hasDemoFinance ? demoTotals.withdrawals : kpi.totalWithdrawals
+  const dailyVolume = hasDemoFinance ? latestDemo?.deposits ?? 0 : kpi.dailyVolume
+  const poolBalance = hasDemoFinance ? demoReports.endingCash : kpi.poolBalance
+  const utilization = percentOf(totalWithdrawals, totalDeposits)
 
   return (
     <div className="space-y-6">
@@ -114,27 +164,27 @@ export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi
         />
         <KpiCard
           label="Günlük hacim"
-          value={formatUSDT(kpi.dailyVolume, 0)}
-          hint="Son 24 saat"
+          value={formatUSDT(dailyVolume, 0)}
+          hint={hasDemoFinance ? 'Demo gün sonu girişi' : 'Son 24 saat'}
           icon={TrendingUp}
           tone="up"
         />
         <KpiCard
           label="Havuz bakiyesi"
-          value={formatUSDT(kpi.poolBalance, 0)}
+          value={formatUSDT(poolBalance, 0)}
           hint={`${formatNumber(utilization, 1)}% kullanım`}
           icon={Waves}
         />
         <KpiCard
-          label="Bekleyen çekim"
-          value={formatNumber(kpi.pendingWithdrawals, 0)}
-          hint="Onay bekliyor"
+          label={hasDemoFinance ? 'Ödeme kuyruğu' : 'Bekleyen çekim'}
+          value={hasDemoFinance ? formatUSDT(latestDemo?.paymentQueue ?? 0, 0) : formatNumber(kpi.pendingWithdrawals, 0)}
+          hint={hasDemoFinance ? 'Demo tahakkuk bakiyesi' : 'Onay bekliyor'}
           icon={Clock}
           tone="down"
         />
       </div>
 
-      <DemoReportOverview daily={demoReports.daily} endingCash={demoReports.endingCash} />
+      <DemoReportOverview daily={demoReports.daily} countries={demoReports.countries} endingCash={demoReports.endingCash} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Volume trend */}
@@ -161,7 +211,7 @@ export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <ArrowUpRight className="size-4 text-light-cyan" /> Yatırım
                 </span>
-                <span className="font-mono tabular-nums">{formatUSDT(kpi.totalDeposits, 0)}</span>
+                <span className="font-mono tabular-nums">{formatUSDT(totalDeposits, 0)}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-surface">
                 <div className="h-full rounded-full bg-cyan" style={{ width: '100%' }} />
@@ -172,19 +222,19 @@ export function AdminOverview({ kpi, withdrawals, demoReports }: { kpi: AdminKpi
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <ArrowDownRight className="size-4 text-electric" /> Çekim
                 </span>
-                <span className="font-mono tabular-nums">{formatUSDT(kpi.totalWithdrawals, 0)}</span>
+                <span className="font-mono tabular-nums">{formatUSDT(totalWithdrawals, 0)}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-surface">
                 <div
                   className="velox-gradient h-full rounded-full"
-                  style={{ width: `${percentOf(kpi.totalWithdrawals, kpi.totalDeposits)}%` }}
+                  style={{ width: `${percentOf(totalWithdrawals, totalDeposits)}%` }}
                 />
               </div>
             </div>
             <div className="rounded-lg border border-border bg-surface p-3">
               <div className="text-xs text-muted-foreground">Net platform akışı</div>
               <div className="mt-1 font-mono text-lg font-semibold text-light-cyan tabular-nums">
-                +{formatUSDT(kpi.totalDeposits - kpi.totalWithdrawals, 0)}
+                +{formatUSDT(totalDeposits - totalWithdrawals, 0)}
               </div>
             </div>
           </div>

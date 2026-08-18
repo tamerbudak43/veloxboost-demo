@@ -25,10 +25,10 @@ export function renderDemoReportCsv(
   rows.push([])
 
   if (kind === 'finance') {
-    rows.push(['Tarih', 'Yeni kayıt', 'Giriş USDT', 'Arbitraj brüt USDT', 'Yatırım kâr dağıtımı USDT', 'Doğrudan referral %6 USDT', 'Network geliri USDT', 'Toplam dağıtım USDT', 'Otomatik ödeme USDT', 'Ödeme kuyruğu USDT', 'Net K/Z USDT', 'Kasa devir USDT'])
+    rows.push(['Tarih', 'Yeni kayıt', 'Giriş USDT', 'Arbitraj brüt USDT', 'Yatırım kâr dağıtımı USDT', 'Doğrudan referral %6 USDT', 'Network geliri USDT', 'Cashback USDT', 'Toplam dağıtım USDT', 'Otomatik ödeme USDT', 'Ödeme kuyruğu USDT', 'Net K/Z USDT', 'Kasa devir USDT'])
     data.daily.forEach((row) => rows.push([
       row.date, row.registrations, amount(row.deposits), amount(row.arbitrageGross), amount(row.memberAccrual),
-      amount(row.referralExpense), amount(row.networkIncome), amount(row.totalDistribution), amount(row.automaticPayments), amount(row.paymentQueue), amount(row.profitLoss), amount(row.closingCash),
+      amount(row.referralExpense), amount(row.networkIncome), amount(row.cashback), amount(row.totalDistribution), amount(row.automaticPayments), amount(row.paymentQueue), amount(row.profitLoss), amount(row.closingCash),
     ]))
     rows.push([])
     rows.push(['Ödeme / ağ detayları'])
