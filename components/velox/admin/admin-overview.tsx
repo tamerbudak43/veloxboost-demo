@@ -33,7 +33,7 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
         { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1624' }, { weight: 3 }] },
         { featureType: 'road', elementType: 'all', stylers: [{ visibility: 'off' }] },
       ] })
-      countries.forEach((item) => { const marker = new maps.Marker({ position: { lat: item.lat, lng: item.lng }, map, title: `${item.city}, ${item.country}: ${item.members} üye · ${formatUSDT(item.deposits, 0)}` }); const info = new maps.InfoWindow({ content: `<div style="color:#10233a;font:500 13px Arial"><strong>${item.city}, ${item.country}</strong><br/>Demo üye: ${item.members}<br/>Demo hacim: ${formatUSDT(item.deposits, 0)}</div>` }); marker.addListener('click', () => info.open({ map, anchor: marker })) })
+      countries.forEach((item, index) => { const circle = new maps.Circle({ map, center: { lat: item.lat, lng: item.lng }, radius: 95000 + item.members * 15000, strokeColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length], strokeOpacity: 1, strokeWeight: 2, fillColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length], fillOpacity: .72, clickable: true }); const info = new maps.InfoWindow({ content: `<div style="color:#10233a;font:500 13px Arial"><strong>${item.city}, ${item.country}</strong><br/>Demo üye: ${item.members}<br/>Demo hacim: ${formatUSDT(item.deposits, 0)}</div>` }); circle.addListener('click', () => info.setPosition(circle.getCenter())) ; circle.addListener('click', () => info.open({ map })) })
       setReady(true)
     }
     if ((window as any).google?.maps) { init(); return }
