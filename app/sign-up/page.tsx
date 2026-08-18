@@ -9,7 +9,7 @@ export default async function SignUpPage({
   searchParams: Promise<{ ref?: string }>
 }) {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (session?.user) redirect('/arbitraj')
+  if (session?.user) redirect('/dashboard')
 
   const { ref } = await searchParams
 

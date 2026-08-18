@@ -5,7 +5,7 @@ import { AuthForm } from '@/components/velox/auth/auth-form'
 
 export default async function SignInPage() {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (session?.user) redirect('/arbitraj')
+  if (session?.user) redirect('/dashboard')
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
