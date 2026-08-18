@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 import { Users, ArrowUpRight, ArrowDownRight, Waves, TrendingUp, Clock, FileDown, BarChart3 } from 'lucide-react'
 import { Panel, StatusPill } from '@/components/velox/primitives'
 import { formatUSDT, formatNumber, percentOf, safeArray, safeNumber } from '@/lib/format'
@@ -13,11 +14,31 @@ const COUNTRY_DOTS: Record<string, { x: number; y: number }> = {
 }
 const COUNTRY_COLORS = ['#22d3ee', '#3b82f6', '#fbbf24', '#d946ef', '#34d399', '#fb7185', '#a78bfa', '#f97316']
 
+const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = { TR: { lat: 39, lng: 35 }, DE: { lat: 51, lng: 10 }, AZ: { lat: 40.1, lng: 47.6 }, KZ: { lat: 48, lng: 67 }, AE: { lat: 24.3, lng: 54.4 }, RU: { lat: 61, lng: 105 }, UZ: { lat: 41.4, lng: 64.6 }, GE: { lat: 42.3, lng: 43.3 } }
+
 function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const [ready, setReady] = useState(false)
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  useEffect(() => {
+    if (!key || !mapRef.current) return
+    const init = () => {
+      const maps = (window as any).google?.maps
+      if (!maps || !mapRef.current) return
+      const map = new maps.Map(mapRef.current, { center: { lat: 43, lng: 45 }, zoom: 3, disableDefaultUI: true, zoomControl: true, styles: [{ elementType: 'geometry', stylers: [{ color: '#071421' }] }, { elementType: 'labels.text.fill', stylers: [{ color: '#8ca7c8' }] }, { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#06111d' }] }] })
+      countries.forEach((item) => { const position = COUNTRY_COORDINATES[item.code]; if (position) new maps.Marker({ position, map, title: `${item.country}: ${item.members} üye · ${formatUSDT(item.deposits, 0)}` }) })
+      setReady(true)
+    }
+    if ((window as any).google?.maps) { init(); return }
+    const id = 'velox-google-maps-script'
+    const existing = document.getElementById(id)
+    if (existing) { existing.addEventListener('load', init); return () => existing.removeEventListener('load', init) }
+    const script = document.createElement('script'); script.id = id; script.async = true; script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`; script.addEventListener('load', init); document.head.appendChild(script)
+  }, [countries, key])
   const max = Math.max(...countries.map((item) => item.deposits), 1)
   return <div className="rounded-lg border border-border bg-surface p-4">
     <div className="flex items-center justify-between"><h3 className="text-sm font-medium">Demo kayıt ülkeleri</h3><span className="text-[10px] text-amber-200">Sentetik konumlar</span></div>
-    <svg viewBox="0 0 100 62" className="mt-3 w-full" role="img" aria-label="Demo ülke dağılımı dünya haritası">
+    {key ? <div ref={mapRef} className="mt-3 h-64 overflow-hidden rounded-md border border-border" aria-label="Demo ülke dağılımı Google haritası" /> : <svg viewBox="0 0 100 62" className="mt-3 w-full" role="img" aria-label="Demo ülke dağılımı dünya haritası">
       <path d="M5 18l10-7 12 2 5 8-5 7-12 1-7 7-5-5 3-8zM32 10l8 3 3 8-4 6-5-4zM44 15l15-5 14 3 10 8-3 6-10 1-5 7-12-3-7-8zM58 36l9 2 6 11-5 10-7-4-4-10zM78 40l11 3 7 8-4 7-10-2-6-8z" fill="currentColor" className="text-background" stroke="currentColor" strokeWidth=".7" opacity=".95" />
       <path d="M5 18l10-7 12 2 5 8-5 7-12 1-7 7-5-5 3-8zM32 10l8 3 3 8-4 6-5-4zM44 15l15-5 14 3 10 8-3 6-10 1-5 7-12-3-7-8zM58 36l9 2 6 11-5 10-7-4-4-10zM78 40l11 3 7 8-4 7-10-2-6-8z" fill="none" stroke="#1e3a5f" strokeWidth=".5" />
       {countries.map((item, index) => {
@@ -25,7 +46,8 @@ function CountryWorldMap({ countries }: { countries: DemoCountryReport[] }) {
         if (!point) return null
         return <g key={item.code}><circle cx={point.x} cy={point.y} r={2 + (item.deposits / max) * 2.4} fill={COUNTRY_COLORS[index % COUNTRY_COLORS.length]} opacity=".88" /><text x={point.x + 2.5} y={point.y - 2} fill="#e5eefc" fontSize="3">{item.code}</text></g>
       })}
-    </svg>
+    </svg>}
+    {key && !ready ? <p className="mt-2 text-[11px] text-muted-foreground">Google haritası yükleniyor…</p> : null}
     <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">{countries.map((item, index) => <div key={item.code} className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><i className="size-2 shrink-0 rounded-full" style={{ backgroundColor: COUNTRY_COLORS[index % COUNTRY_COLORS.length] }} />{item.country}</span><span className="font-mono text-foreground">{item.members} · {formatUSDT(item.deposits, 0)}</span></div>)}</div>
   </div>
 }
