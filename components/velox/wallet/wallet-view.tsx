@@ -101,7 +101,7 @@ function DepositTab({
   const defaultNetwork = walletNetworks.find((network) => network.configured) ?? walletNetworks[0]
   const [networkId, setNetworkId] = useState<WalletNetworkId>(defaultNetwork?.id ?? 'TON')
   const [copiedField, setCopiedField] = useState<'address' | 'memo' | null>(null)
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState(() => String(defaultNetwork?.minimumDeposit ?? 100))
   const [creating, setCreating] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -127,7 +127,7 @@ function DepositTab({
       const receipt = await createInvestmentInstruction(Number(amount), networkId)
       setReceipts((current) => [receipt, ...current])
       setMessage(`Talimat ${receipt.receiptNumber} ile oluşturuldu. Ağ doğrulamasından sonra PDF indirilebilir.`)
-      setAmount('')
+      setAmount(String(selectedNetwork?.minimumDeposit ?? 100))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Yatırım talimatı oluşturulamadı.')
     } finally {
@@ -135,12 +135,20 @@ function DepositTab({
     }
   }
 
+  function selectDepositNetwork(nextNetworkId: WalletNetworkId) {
+    const nextNetwork = walletNetworks.find((network) => network.id === nextNetworkId)
+    setNetworkId(nextNetworkId)
+    setAmount(String(nextNetwork?.minimumDeposit ?? 100))
+    setMessage(null)
+    setError(null)
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
       <Panel>
         <PanelHeader title="Bakiye yatır" right={<StatusPill tone="active">{selectedNetwork?.id ?? 'USDT'}</StatusPill>} />
         <div className="space-y-4 p-4">
-          <NetworkSelector networks={walletNetworks} value={networkId} onChange={setNetworkId} />
+          <NetworkSelector networks={walletNetworks} value={networkId} onChange={selectDepositNetwork} />
 
           <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-xs leading-5 text-rose-200">
             <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>USDT varlığında çalışmanın minimum tutarı <strong>{selectedNetwork?.minimumDeposit ?? 100} USDT</strong>.</span></div>
@@ -216,6 +224,8 @@ function DepositTab({
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             inputMode="decimal"
+            min={selectedNetwork?.minimumDeposit ?? 100}
+            step="0.01"
             placeholder="0.00"
             className="mt-1.5 w-full rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-electric"
           />
