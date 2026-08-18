@@ -35,7 +35,7 @@ function NodeCard({
       }}
       title={`${node.name} alt ağacını görüntüle`}
       className={cn(
-        'relative flex w-32 cursor-pointer flex-col rounded-md border px-2 py-1.5 text-left transition-colors hover:border-cyan/70 hover:bg-cyan/5 focus:outline-none focus:ring-1 focus:ring-cyan/70',
+        'relative flex w-28 cursor-pointer flex-col rounded-md border px-1.5 py-1 text-left transition-colors hover:border-cyan/70 hover:bg-cyan/5 focus:outline-none focus:ring-1 focus:ring-cyan/70',
         node.isSelf
           ? 'border-transparent [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(135deg,#0877e8,#18d4e8)_border-box]'
           : node.isStrongLeg
@@ -48,7 +48,7 @@ function NodeCard({
       {node.isSelf && (
         <span
           className={cn(
-            'absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide',
+            'absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide',
             'bg-electric/15 text-bright',
           )}
         >
@@ -56,10 +56,10 @@ function NodeCard({
         </span>
       )}
 
-      <span className={cn('line-clamp-1 text-[9px] font-semibold', node.isSelf ? 'text-cyan' : 'text-foreground')}>{node.name}</span>
-      <span className="mt-0.5 text-[8px] text-muted-foreground">{node.isSelf ? 'Ana hesap' : `${placement ?? 'Alt'} bacak`} · {node.career}</span>
-      <span className="mt-1 font-mono text-[8px] tabular-nums text-secondary-foreground">Yatırım: {formatUSDT(node.personalVolume, 0)}</span>
-      <span className="max-w-full truncate font-mono text-[7px] text-muted-foreground">{node.veloxId} · Ekip: {formatUSDT(node.teamVolume, 0)}</span>
+      <span className={cn('line-clamp-1 text-[8px] font-semibold', node.isSelf ? 'text-cyan' : 'text-foreground')}>{node.name}</span>
+      <span className="mt-0.5 text-[7px] text-muted-foreground">{node.isSelf ? 'Ana hesap' : `${placement ?? 'Alt'} bacak`} · {node.career}</span>
+      <span className="mt-0.5 font-mono text-[7px] tabular-nums text-secondary-foreground">Yatırım: {formatUSDT(node.personalVolume, 0)}</span>
+      <span className="max-w-full truncate font-mono text-[6px] text-muted-foreground">{node.veloxId} · Ekip: {formatUSDT(node.teamVolume, 0)}</span>
 
       {hasChildren && (
         <button
@@ -69,11 +69,11 @@ function NodeCard({
             onToggle()
           }}
           aria-label={open ? 'Daralt' : 'Genişlet'}
-          className="mt-1 inline-flex w-fit items-center gap-0.5 rounded border border-border bg-elevated px-1 py-0.5 text-[7px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="mt-0.5 inline-flex w-fit items-center gap-0.5 rounded border border-border bg-elevated px-1 py-0.5 text-[6px] font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Users className="size-2.5" />
+          <Users className="size-2" />
           {node.directCount} direkt
-          {open ? <ChevronDown className="size-2.5" /> : <ChevronRight className="size-2.5" />}
+          {open ? <ChevronDown className="size-2" /> : <ChevronRight className="size-2" />}
         </button>
       )}
     </div>
@@ -109,7 +109,7 @@ function TreeNode({
       {showChildren && (
         <>
           {/* vertical stub dropping from the parent card */}
-          <div className="h-2 w-px bg-border" />
+          <div className="h-1.5 w-px bg-border" />
 
           {/* children row with connector bars */}
           <div className="flex items-start">
@@ -118,9 +118,9 @@ function TreeNode({
               const isLast = i === children.length - 1
               const isOnly = children.length === 1
               return (
-                <div key={child.id} className="flex flex-col items-center px-1">
+                <div key={child.id} className="flex flex-col items-center px-0.5">
                   {/* connector segment above each child */}
-                  <div className="relative h-2 w-full">
+                  <div className="relative h-1.5 w-full">
                     {/* vertical line down to the child card */}
                     <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-border" />
                     {/* horizontal bar linking siblings (skip for single child) */}
@@ -178,7 +178,7 @@ export function SponsorTree({ root }: { root: SponsorTreeNode | null }) {
   const focusedNode = nodes[focusedIndex]
 
   return (
-    <div className="overflow-x-auto p-3">
+    <div className="overflow-x-auto p-2">
       {focusedIndex > 0 && focusedNode && (
         <div className="mb-2 flex min-w-max items-center justify-center gap-2 text-xs text-muted-foreground">
           <span><span className="font-medium text-foreground">{focusedNode.name}</span> alt ağı görüntüleniyor</span>
