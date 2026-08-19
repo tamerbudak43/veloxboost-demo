@@ -577,14 +577,10 @@ export function translateLegacyText(
   if (language === 'en') return `${leading}${english}${trailing}`
   if (language === 'tr') return source
 
-  // For older explanatory sentences, keep the canonical English sentence but
-  // localize every recognized interface term. This ensures there is no stale
-  // Turkish copy while exact page labels use the selected-language dictionary.
-  let translated = english
-  const aliases = Object.entries(coreAliases).sort(([a], [b]) => b.length - a.length)
-  for (const [alias, key] of aliases) {
-    if (!/^[A-Za-z][A-Za-z /-]*$/.test(alias)) continue
-    translated = translated.replace(new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\b`, 'gi'), core[language][key])
-  }
-  return `${leading}${translated}${trailing}`
+  // Never build a sentence by replacing isolated English words. That produced
+  // grammatically invalid mixed-language copy (for example English + Russian
+  // + Turkish in one sentence). Complete phrases are translated by the exact
+  // screen dictionaries; an uncovered legacy sentence falls back atomically
+  // to canonical English until an exact translation is added.
+  return `${leading}${english}${trailing}`
 }

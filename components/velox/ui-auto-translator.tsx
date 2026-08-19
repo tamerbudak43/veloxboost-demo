@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { type LanguageCode, useLanguage } from './language-context'
 import { translateLegacyText } from './legacy-content-translations'
 import { priorityScreenTranslationRows, translationLanguageOrder, type TranslationRow } from './priority-screen-translations'
+import { professionalScreenTranslationRows } from './professional-screen-translations'
 
 const targetLanguages = translationLanguageOrder
 type TargetLanguage = (typeof targetLanguages)[number]
@@ -15,6 +16,7 @@ type Row = TranslationRow
 // to the same language selection without duplicating page-local state.
 const rows: Row[] = [
   ...priorityScreenTranslationRows,
+  ...professionalScreenTranslationRows,
   ['Cüzdan İşlemleri','Wallet Operations','Операции кошелька','Операції гаманця','Operaciones de billetera','Operações da carteira','Wallet-Vorgänge','Operazioni portafoglio','Opérations du portefeuille','Әмиян операциялары','Операции с портфейла','Operasi dompet','عمليات المحفظة','钱包操作','Tárcaműveletek','عملیات کیف پول'],
   ['Ticaret bakiyesi','Trading balance','Торговый баланс','Торговий баланс','Saldo de trading','Saldo de negociação','Handelsguthaben','Saldo di trading','Solde de trading','Сауда балансы','Търговски баланс','Saldo perdagangan','رصيد التداول','交易余额','Kereskedési egyenleg','موجودی معامله'],
   ['Gelir bakiyesi (çekilebilir)','Income balance (withdrawable)','Доходный баланс (доступен)','Баланс доходу (доступний)','Saldo de ingresos (retirable)','Saldo de renda (sacável)','Einkommensguthaben (auszahlbar)','Saldo redditi (prelevabile)','Solde de revenus (retirable)','Кіріс балансы (шығаруға болады)','Доходен баланс (за теглене)','Saldo pendapatan (dapat ditarik)','رصيد الدخل (قابل للسحب)','收益余额（可提现）','Jövedelemegyenleg (kivehető)','موجودی درآمد (قابل برداشت)'],
@@ -177,7 +179,17 @@ export function translateUiText(value: string, language: LanguageCode, shared: R
     phrasePattern,
     (_match, prefix: string, term: string) => `${prefix}${dictionary[term] ?? term}`,
   )
-  if (translated !== source) return `${leading}${translated}${trailing}`
+  if (translated !== source) {
+    // Phrase composition is safe only when every human-readable source word
+    // was covered. Numbers, currency symbols and product identifiers may stay
+    // unchanged; any leftover letters would create a mixed-language sentence.
+    phrasePattern.lastIndex = 0
+    const uncoveredLetters = source
+      .replace(phrasePattern, '$1')
+      .replace(/\b(?:USDT|ETH|VELOX|PRO|TXID)\b/gi, '')
+      .replace(/[^\p{L}]+/gu, '')
+    if (!uncoveredLetters) return `${leading}${translated}${trailing}`
+  }
 
   return translateLegacyText(value, language, shared)
 }
