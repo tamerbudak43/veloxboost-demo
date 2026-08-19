@@ -6,30 +6,32 @@ import { cn } from '@/lib/utils'
 import { type LanguageCode, useLanguage } from './language-context'
 
 type Language = {
-  code: string
+  code: LanguageCode
   nativeName: string
   englishName: string
   direction?: 'rtl'
 }
 
-const languages: Language[] = [
-  { code: 'en', nativeName: 'English', englishName: 'English' },
-  { code: 'ru', nativeName: 'Русский', englishName: 'Russian' },
-  { code: 'uk', nativeName: 'Українська', englishName: 'Ukrainian' },
-  { code: 'es', nativeName: 'Español', englishName: 'Spanish' },
-  { code: 'pt', nativeName: 'Português', englishName: 'Portuguese' },
-  { code: 'de', nativeName: 'Deutsch', englishName: 'German' },
-  { code: 'it', nativeName: 'Italiano', englishName: 'Italian' },
-  { code: 'fr', nativeName: 'Français', englishName: 'French' },
-  { code: 'kk', nativeName: 'Қазақша', englishName: 'Kazakh' },
-  { code: 'tr', nativeName: 'Türkçe', englishName: 'Turkish' },
-  { code: 'bg', nativeName: 'Български', englishName: 'Bulgarian' },
-  { code: 'id', nativeName: 'Bahasa Indonesia', englishName: 'Indonesian' },
-  { code: 'ar', nativeName: 'العربية', englishName: 'Arabic', direction: 'rtl' },
-  { code: 'zh', nativeName: '中文', englishName: 'Chinese' },
-  { code: 'hu', nativeName: 'Magyar', englishName: 'Hungarian' },
-  { code: 'fa', nativeName: 'فارسی', englishName: 'Persian', direction: 'rtl' },
-]
+const languageByCode: Record<LanguageCode, Language> = {
+  en: { code: 'en', nativeName: 'English', englishName: 'English' },
+  ru: { code: 'ru', nativeName: 'Русский', englishName: 'Russian' },
+  uk: { code: 'uk', nativeName: 'Українська', englishName: 'Ukrainian' },
+  es: { code: 'es', nativeName: 'Español', englishName: 'Spanish' },
+  pt: { code: 'pt', nativeName: 'Português', englishName: 'Portuguese' },
+  de: { code: 'de', nativeName: 'Deutsch', englishName: 'German' },
+  it: { code: 'it', nativeName: 'Italiano', englishName: 'Italian' },
+  fr: { code: 'fr', nativeName: 'Français', englishName: 'French' },
+  kk: { code: 'kk', nativeName: 'Қазақша', englishName: 'Kazakh' },
+  tr: { code: 'tr', nativeName: 'Türkçe', englishName: 'Turkish' },
+  bg: { code: 'bg', nativeName: 'Български', englishName: 'Bulgarian' },
+  id: { code: 'id', nativeName: 'Bahasa Indonesia', englishName: 'Indonesian' },
+  ar: { code: 'ar', nativeName: 'العربية', englishName: 'Arabic', direction: 'rtl' },
+  zh: { code: 'zh', nativeName: '中文', englishName: 'Chinese' },
+  hu: { code: 'hu', nativeName: 'Magyar', englishName: 'Hungarian' },
+  fa: { code: 'fa', nativeName: 'فارسی', englishName: 'Persian', direction: 'rtl' },
+}
+
+const languages = Object.values(languageByCode)
 
 export function LanguageSwitcher() {
   const { language: selectedCode, setLanguage, t } = useLanguage()
@@ -55,7 +57,7 @@ export function LanguageSwitcher() {
   }, [])
 
   function chooseLanguage(language: Language) {
-    setLanguage(language.code as LanguageCode)
+    setLanguage(language.code)
     setOpen(false)
   }
 

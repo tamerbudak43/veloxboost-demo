@@ -2,16 +2,19 @@
 
 import { useEffect, useRef, type ReactNode } from 'react'
 import { type LanguageCode, useLanguage } from './language-context'
+import { translateLegacyText } from './legacy-content-translations'
+import { priorityScreenTranslationRows, translationLanguageOrder, type TranslationRow } from './priority-screen-translations'
 
-const targetLanguages = ['en', 'ru', 'uk', 'es', 'pt', 'de', 'it', 'fr', 'kk', 'bg', 'id', 'ar', 'zh', 'hu', 'fa'] as const
+const targetLanguages = translationLanguageOrder
 type TargetLanguage = (typeof targetLanguages)[number]
 
-type Row = readonly [source: string, ...translations: string[]]
+type Row = TranslationRow
 
 // Shared UI vocabulary used by the older VELOX screens. New screens should
 // prefer useLanguage(), but this bridge keeps every existing screen connected
 // to the same language selection without duplicating page-local state.
 const rows: Row[] = [
+  ...priorityScreenTranslationRows,
   ['Cüzdan İşlemleri','Wallet Operations','Операции кошелька','Операції гаманця','Operaciones de billetera','Operações da carteira','Wallet-Vorgänge','Operazioni portafoglio','Opérations du portefeuille','Әмиян операциялары','Операции с портфейла','Operasi dompet','عمليات المحفظة','钱包操作','Tárcaműveletek','عملیات کیف پول'],
   ['Ticaret bakiyesi','Trading balance','Торговый баланс','Торговий баланс','Saldo de trading','Saldo de negociação','Handelsguthaben','Saldo di trading','Solde de trading','Сауда балансы','Търговски баланс','Saldo perdagangan','رصيد التداول','交易余额','Kereskedési egyenleg','موجودی معامله'],
   ['Gelir bakiyesi (çekilebilir)','Income balance (withdrawable)','Доходный баланс (доступен)','Баланс доходу (доступний)','Saldo de ingresos (retirable)','Saldo de renda (sacável)','Einkommensguthaben (auszahlbar)','Saldo redditi (prelevabile)','Solde de revenus (retirable)','Кіріс балансы (шығаруға болады)','Доходен баланс (за теглене)','Saldo pendapatan (dapat ditarik)','رصيد الدخل (قابل للسحب)','收益余额（可提现）','Jövedelemegyenleg (kivehető)','موجودی درآمد (قابل برداشت)'],
@@ -128,6 +131,24 @@ const rows: Row[] = [
   ['Ağ bulunamadı','Network not found','Сеть не найдена','Мережу не знайдено','Red no encontrada','Rede não encontrada','Netzwerk nicht gefunden','Rete non trovata','Réseau introuvable','Желі табылмады','Мрежата не е намерена','Jaringan tidak ditemukan','لم يتم العثور على الشبكة','未找到网络','A hálózat nem található','شبکه پیدا نشد'],
   ['alıcı istiyorsa','if required by recipient','если требует получатель','якщо вимагає одержувач','si lo exige el destinatario','se exigido pelo destinatário','falls vom Empfänger verlangt','se richiesto dal destinatario','si le destinataire l’exige','алушы талап етсе','ако получателят изисква','jika diminta penerima','إذا طلبه المستلم','如收款方要求','ha a címzett kéri','در صورت درخواست گیرنده'],
   ['Hedef adres','Destination address','Адрес назначения','Адреса призначення','Dirección de destino','Endereço de destino','Zieladresse','Indirizzo di destinazione','Adresse de destination','Мақсатты мекенжай','Адрес на местоназначение','Alamat tujuan','عنوان الوجهة','目标地址','Célcím','آدرس مقصد'],
+  ['Desteklenen USDT ağlarında bakiye yatırma, çekim talebi ve otomatik çekim kurallarını yönetin.','Manage deposits, withdrawal requests and automatic withdrawal rules across supported USDT networks.','Управляйте пополнениями, запросами на вывод и правилами автовывода в поддерживаемых сетях USDT.','Керуйте поповненнями, запитами на виведення та правилами автовиведення в підтримуваних мережах USDT.','Gestiona depósitos, solicitudes de retiro y reglas de retiro automático en las redes USDT compatibles.','Gerencie depósitos, solicitações de saque e regras de saque automático nas redes USDT compatíveis.','Verwalten Sie Einzahlungen, Auszahlungsanträge und Regeln für automatische Auszahlungen in unterstützten USDT-Netzwerken.','Gestisci depositi, richieste di prelievo e regole di prelievo automatico sulle reti USDT supportate.','Gérez les dépôts, les demandes de retrait et les règles de retrait automatique sur les réseaux USDT pris en charge.','Қолдау көрсетілетін USDT желілеріндегі салымдарды, шығару сұрауларын және автоматты шығару ережелерін басқарыңыз.','Управлявайте депозитите, заявките за теглене и правилата за автоматично теглене в поддържаните USDT мрежи.','Kelola deposit, permintaan penarikan, dan aturan penarikan otomatis di jaringan USDT yang didukung.','أدر الإيداعات وطلبات السحب وقواعد السحب التلقائي عبر شبكات USDT المدعومة.','管理受支持 USDT 网络中的充值、提现申请和自动提现规则。','Kezelje a befizetéseket, a kifizetési kérelmeket és az automatikus kifizetési szabályokat a támogatott USDT-hálózatokon.','واریزها، درخواست‌های برداشت و قوانین برداشت خودکار را در شبکه‌های پشتیبانی‌شده USDT مدیریت کنید.'],
+  ['Tutar, yukarıdaki adrese gönderiminizle eşleştirilir.','The amount is matched with your transfer to the address above.','Сумма сопоставляется с вашим переводом на указанный выше адрес.','Сума зіставляється з вашим переказом на вказану вище адресу.','El importe se vincula con tu envío a la dirección anterior.','O valor é associado à sua transferência para o endereço acima.','Der Betrag wird Ihrer Überweisung an die oben angegebene Adresse zugeordnet.','L’importo viene associato al trasferimento verso l’indirizzo indicato sopra.','Le montant est associé à votre transfert vers l’adresse ci-dessus.','Сома жоғарыдағы мекенжайға жіберген аударымыңызбен сәйкестендіріледі.','Сумата се свързва с превода ви към посочения по-горе адрес.','Jumlah dicocokkan dengan transfer Anda ke alamat di atas.','تتم مطابقة المبلغ مع تحويلك إلى العنوان أعلاه.','金额将与您向上述地址发起的转账匹配。','Az összeget a fenti címre indított átutalásával párosítjuk.','مبلغ با انتقال شما به آدرس بالا تطبیق داده می‌شود.'],
+  ['Oluşturuluyor…','Creating…','Создание…','Створення…','Creando…','Criando…','Wird erstellt…','Creazione…','Création…','Жасалуда…','Създаване…','Membuat…','جارٍ الإنشاء…','正在创建…','Létrehozás…','در حال ایجاد…'],
+  ['ile oluşturuldu. Ağ doğrulamasından sonra PDF indirilebilir.','was created. The PDF can be downloaded after network confirmation.','создана. PDF можно скачать после подтверждения сетью.','створено. PDF можна завантажити після підтвердження мережею.','se creó. El PDF se puede descargar tras la confirmación de la red.','foi criada. O PDF pode ser baixado após a confirmação da rede.','wurde erstellt. Das PDF kann nach der Netzwerkbestätigung heruntergeladen werden.','è stata creata. Il PDF può essere scaricato dopo la conferma della rete.','a été créée. Le PDF peut être téléchargé après confirmation du réseau.','жасалды. PDF желі растағаннан кейін жүктеп алынады.','е създадена. PDF файлът може да се изтегли след потвърждение от мрежата.','telah dibuat. PDF dapat diunduh setelah konfirmasi jaringan.','تم إنشاؤها. يمكن تنزيل ملف PDF بعد تأكيد الشبكة.','已创建。网络确认后可下载 PDF。','létrejött. A PDF a hálózati megerősítés után tölthető le.','ایجاد شد. فایل PDF پس از تأیید شبکه قابل دانلود است.'],
+  ['Yatırım talimatı oluşturulamadı.','The deposit instruction could not be created.','Не удалось создать инструкцию по пополнению.','Не вдалося створити інструкцію з поповнення.','No se pudo crear la instrucción de depósito.','Não foi possível criar a instrução de depósito.','Die Einzahlungsanweisung konnte nicht erstellt werden.','Impossibile creare l’istruzione di deposito.','L’instruction de dépôt n’a pas pu être créée.','Салым нұсқауын жасау мүмкін болмады.','Инструкцията за депозит не можа да бъде създадена.','Instruksi deposit tidak dapat dibuat.','تعذر إنشاء تعليمات الإيداع.','无法创建充值指令。','A befizetési utasítás nem hozható létre.','دستور واریز ایجاد نشد.'],
+  ['Zorunlu Memo/Etiket yapılandırılmayı bekliyor','Required Memo/Tag is awaiting configuration','Обязательное мемо/метка ожидает настройки','Обов’язкове мемо/мітка очікує налаштування','El Memo/Etiqueta obligatorio está pendiente de configuración','O Memo/Etiqueta obrigatório aguarda configuração','Erforderliches Memo/Tag wartet auf Konfiguration','Il Memo/Etichetta obbligatorio è in attesa di configurazione','Le Mémo/Étiquette obligatoire attend sa configuration','Міндетті мемо/белгі баптауды күтуде','Задължителното мемо/етикет очаква конфигурация','Memo/Tag wajib menunggu konfigurasi','المذكرة/الوسم المطلوب بانتظار الإعداد','必填备注/标签正在等待配置','A kötelező megjegyzés/címke beállításra vár','یادداشت/برچسب الزامی در انتظار پیکربندی است'],
+  ['Çekim talebi oluştur','Create withdrawal request','Создать запрос на вывод','Створити запит на виведення','Crear solicitud de retiro','Criar solicitação de saque','Auszahlungsantrag erstellen','Crea richiesta di prelievo','Créer une demande de retrait','Шығару сұрауын жасау','Създай заявка за теглене','Buat permintaan penarikan','إنشاء طلب سحب','创建提现申请','Kifizetési kérelem létrehozása','ایجاد درخواست برداشت'],
+  ['Çekim tutarı','Withdrawal amount','Сумма вывода','Сума виведення','Importe del retiro','Valor do saque','Auszahlungsbetrag','Importo del prelievo','Montant du retrait','Шығару сомасы','Сума за теглене','Jumlah penarikan','مبلغ السحب','提现金额','Kifizetési összeg','مبلغ برداشت'],
+  ['Ağ ücreti (%1)','Network fee (1%)','Комиссия сети (1%)','Комісія мережі (1%)','Comisión de red (1%)','Taxa de rede (1%)','Netzwerkgebühr (1 %)','Commissione di rete (1%)','Frais de réseau (1 %)','Желі комиссиясы (1%)','Мрежова такса (1%)','Biaya jaringan (1%)','رسوم الشبكة (1٪)','网络手续费（1%）','Hálózati díj (1%)','کارمزد شبکه (۱٪)'],
+  ['Hesabınıza geçecek','Amount to be credited','Будет зачислено','Буде зараховано','Importe que recibirás','Valor a creditar','Gutschrift auf Ihrem Konto','Importo accreditato','Montant crédité','Шотыңызға түсетін сома','Сума за получаване','Jumlah yang dikreditkan','المبلغ الذي سيُضاف إلى حسابك','到账金额','Jóváírandó összeg','مبلغ واریزی به حساب'],
+  ['Çekimler manuel güvenlik onayından sonra 24 saat içinde işlenir. Yalnızca gelir bakiyesi çekilebilir; ticaret bakiyesi aktif arbitrajda kullanılır.','Withdrawals are processed within 24 hours after manual security approval. Only the income balance can be withdrawn; the trading balance is used in active arbitrage.','Выводы обрабатываются в течение 24 часов после ручной проверки безопасности. Вывести можно только доходный баланс; торговый баланс используется в активном арбитраже.','Виведення обробляються протягом 24 годин після ручного підтвердження безпеки. Вивести можна лише баланс доходу; торговий баланс використовується в активному арбітражі.','Los retiros se procesan en un plazo de 24 horas tras la aprobación manual de seguridad. Solo se puede retirar el saldo de ingresos; el saldo de trading se usa en el arbitraje activo.','Os saques são processados em até 24 horas após a aprovação manual de segurança. Apenas o saldo de renda pode ser sacado; o saldo de negociação é usado na arbitragem ativa.','Auszahlungen werden innerhalb von 24 Stunden nach manueller Sicherheitsfreigabe bearbeitet. Nur das Einkommensguthaben kann ausgezahlt werden; das Handelsguthaben wird für aktive Arbitrage verwendet.','I prelievi vengono elaborati entro 24 ore dall’approvazione manuale di sicurezza. È possibile prelevare solo il saldo redditi; il saldo di trading viene usato nell’arbitraggio attivo.','Les retraits sont traités sous 24 heures après validation manuelle de sécurité. Seul le solde de revenus peut être retiré ; le solde de trading est utilisé pour l’arbitrage actif.','Шығарулар қолмен қауіпсіздік растауынан кейін 24 сағат ішінде өңделеді. Тек кіріс балансын шығаруға болады; сауда балансы белсенді арбитражда қолданылады.','Тегленията се обработват до 24 часа след ръчно одобрение за сигурност. Може да се тегли само доходният баланс; търговският баланс се използва в активен арбитраж.','Penarikan diproses dalam 24 jam setelah persetujuan keamanan manual. Hanya saldo pendapatan yang dapat ditarik; saldo perdagangan digunakan dalam arbitrase aktif.','تُعالج عمليات السحب خلال 24 ساعة بعد الموافقة الأمنية اليدوية. يمكن سحب رصيد الدخل فقط؛ ويُستخدم رصيد التداول في المراجحة النشطة.','提现将在人工安全审核后的 24 小时内处理。只有收益余额可以提现；交易余额用于进行中的套利。','A kifizetéseket a kézi biztonsági jóváhagyás után 24 órán belül feldolgozzuk. Csak a jövedelemegyenleg vehető ki; a kereskedési egyenleg aktív arbitrázsra szolgál.','برداشت‌ها پس از تأیید دستی امنیتی ظرف ۲۴ ساعت پردازش می‌شوند. فقط موجودی درآمد قابل برداشت است؛ موجودی معامله در آربیتراژ فعال استفاده می‌شود.'],
+  ['Otomatik çekimi etkinleştir','Enable automatic withdrawal','Включить автоматический вывод','Увімкнути автоматичне виведення','Activar retiro automático','Ativar saque automático','Automatische Auszahlung aktivieren','Attiva il prelievo automatico','Activer le retrait automatique','Автоматты шығаруды қосу','Активирай автоматичното теглене','Aktifkan penarikan otomatis','تفعيل السحب التلقائي','启用自动提现','Automatikus kifizetés engedélyezése','فعال‌کردن برداشت خودکار'],
+  ['Gelir bakiyeniz eşiğe ulaştığında otomatik çekim talebi oluşturulur.','An automatic withdrawal request is created when your income balance reaches the threshold.','Когда доходный баланс достигает порога, автоматически создаётся запрос на вывод.','Коли баланс доходу досягає порога, автоматично створюється запит на виведення.','Se crea una solicitud de retiro automática cuando tu saldo de ingresos alcanza el umbral.','Uma solicitação de saque automática é criada quando seu saldo de renda atinge o limite.','Sobald Ihr Einkommensguthaben den Schwellenwert erreicht, wird automatisch ein Auszahlungsantrag erstellt.','Quando il saldo redditi raggiunge la soglia, viene creata una richiesta di prelievo automatica.','Une demande de retrait automatique est créée lorsque votre solde de revenus atteint le seuil.','Кіріс балансы шекке жеткенде автоматты шығару сұрауы жасалады.','Когато доходният ви баланс достигне прага, автоматично се създава заявка за теглене.','Permintaan penarikan otomatis dibuat saat saldo pendapatan Anda mencapai ambang batas.','يُنشأ طلب سحب تلقائي عندما يصل رصيد الدخل إلى الحد المحدد.','当收益余额达到阈值时，系统会自动创建提现申请。','Amikor a jövedelemegyenlege eléri a küszöböt, automatikus kifizetési kérelem készül.','وقتی موجودی درآمد به آستانه برسد، درخواست برداشت خودکار ایجاد می‌شود.'],
+  ['Çekim eşiği (USDT)','Withdrawal threshold (USDT)','Порог вывода (USDT)','Поріг виведення (USDT)','Umbral de retiro (USDT)','Limite de saque (USDT)','Auszahlungsschwelle (USDT)','Soglia di prelievo (USDT)','Seuil de retrait (USDT)','Шығару шегі (USDT)','Праг за теглене (USDT)','Ambang penarikan (USDT)','حد السحب (USDT)','提现阈值（USDT）','Kifizetési küszöb (USDT)','آستانه برداشت (USDT)'],
+  ['Pasif','Inactive','Неактивно','Неактивно','Inactivo','Inativo','Inaktiv','Inattivo','Inactif','Белсенді емес','Неактивно','Tidak aktif','غير نشط','未启用','Inaktív','غیرفعال'],
+  ['Maks:','Max:','Макс.:','Макс.:','Máx.:','Máx.:','Max.:','Max:','Max :','Макс.:','Макс.:','Maks:','الحد الأقصى:','最大值：','Max.:','حداکثر:'],
+  ['Alıcı','Recipient','Получатель','Одержувач','Destinatario','Destinatário','Empfänger','Destinatario','Destinataire','Алушы','Получател','Penerima','المستلم','收款方','Címzett','گیرنده'],
+  ['kopyala','copy','копировать','копіювати','copiar','copiar','kopieren','copia','copier','көшіру','копирай','salin','نسخ','复制','másolás','کپی'],
 ]
 
 const dictionaries = Object.fromEntries(targetLanguages.map((language, languageIndex) => [
@@ -142,7 +163,7 @@ const phrasePattern = new RegExp(
   'gu',
 )
 
-export function translateUiText(value: string, language: LanguageCode): string {
+export function translateUiText(value: string, language: LanguageCode, shared: Record<string, string> = {}): string {
   if (language === 'tr' || !value.trim()) return value
   const dictionary = dictionaries[language]
   const leading = value.match(/^\s*/)?.[0] ?? ''
@@ -156,14 +177,16 @@ export function translateUiText(value: string, language: LanguageCode): string {
     phrasePattern,
     (_match, prefix: string, term: string) => `${prefix}${dictionary[term] ?? term}`,
   )
-  return translated === source ? value : `${leading}${translated}${trailing}`
+  if (translated !== source) return `${leading}${translated}${trailing}`
+
+  return translateLegacyText(value, language, shared)
 }
 
 const translatedAttributes = ['placeholder', 'aria-label', 'title'] as const
 const excludedSelector = '[data-no-auto-translate],script,style,code,pre'
 
 export function AutoTranslate({ children }: { children: ReactNode }) {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const rootRef = useRef<HTMLDivElement>(null)
   const textState = useRef(new WeakMap<Text, { source: string; rendered: string }>())
   const attributeState = useRef(new WeakMap<Element, Map<string, { source: string; rendered: string }>>())
@@ -182,7 +205,7 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
       const current = node.nodeValue ?? ''
       const previous = textState.current.get(node)
       const source = previous && current === previous.rendered ? previous.source : current
-      const rendered = translateUiText(source, language)
+      const rendered = translateUiText(source, language, t as unknown as Record<string, string>)
       textState.current.set(node, { source, rendered })
       if (current !== rendered) node.nodeValue = rendered
     }
@@ -199,7 +222,7 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
         if (!current) continue
         const previous = state.get(name)
         const source = previous && current === previous.rendered ? previous.source : current
-        const rendered = translateUiText(source, language)
+        const rendered = translateUiText(source, language, t as unknown as Record<string, string>)
         state.set(name, { source, rendered })
         if (current !== rendered) element.setAttribute(name, rendered)
       }
@@ -269,7 +292,7 @@ export function AutoTranslate({ children }: { children: ReactNode }) {
       if (frameId !== null) window.cancelAnimationFrame(frameId)
       pending.clear()
     }
-  }, [language])
+  }, [language, t])
 
   return <div ref={rootRef} className="contents">{children}</div>
 }
