@@ -102,20 +102,29 @@ export async function createMemberProfile(input: {
   const bootstrapEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase()
   const isInitialAdmin = Boolean(bootstrapEmail && normalizedEmail === bootstrapEmail)
 
-  await db.transaction(async (tx) => {
-    await tx.insert(member).values({
-      userId,
-      name: input.name.trim(),
-      email: normalizedEmail,
-      veloxId,
-      referralCode,
-      sponsorId: sponsor?.userId ?? null,
-      // Only the explicitly configured local bootstrap email can receive the
-      // initial admin role. No client input can set a role.
-      role: isInitialAdmin ? 'admin' : 'member',
-      status: 'active',
-      career: 'STARTER',
-    })
+  const result = await db.transaction(async (tx) => {
+    // onConflictDoNothing guards against concurrent calls racing to create
+    // the same user's profile — e.g. Next.js fetching a layout's safety net
+    // and a page's data in parallel for a brand-new member.
+    const inserted = await tx
+      .insert(member)
+      .values({
+        userId,
+        name: input.name.trim(),
+        email: normalizedEmail,
+        veloxId,
+        referralCode,
+        sponsorId: sponsor?.userId ?? null,
+        // Only the explicitly configured local bootstrap email can receive the
+        // initial admin role. No client input can set a role.
+        role: isInitialAdmin ? 'admin' : 'member',
+        status: 'active',
+        career: 'STARTER',
+      })
+      .onConflictDoNothing({ target: member.userId })
+      .returning({ veloxId: member.veloxId, referralCode: member.referralCode })
+
+    if (inserted.length === 0) return null // lost the race, another call already inserted
 
     if (sponsor) {
       await writeClosure(tx, sponsor.userId, userId)
@@ -125,9 +134,16 @@ export async function createMemberProfile(input: {
         .set({ directCount: sql`${member.directCount} + 1` })
         .where(eq(member.userId, sponsor.userId))
     }
+
+    return inserted[0]
   })
 
-  return { ok: true, veloxId, referralCode }
+  if (!result) {
+    const [existing] = await db.select().from(member).where(eq(member.userId, userId)).limit(1)
+    return { ok: true, veloxId: existing!.veloxId, referralCode: existing!.referralCode }
+  }
+
+  return { ok: true, veloxId: result.veloxId, referralCode: result.referralCode }
 }
 
 /**
@@ -149,11 +165,22 @@ export async function ensureInitialAdmin() {
   return true
 }
 
-/** Returns the current user's member profile (or null if not created yet). */
+/**
+ * Returns the current user's member profile, provisioning one if this is a
+ * signed-in user without a row yet (e.g. accounts created before the profile
+ * step). Provisioning lives here — not only as a layout-level side effect —
+ * because Next.js fetches a layout and its page's data in parallel; a
+ * layout-only safety net can lose that race and leave callers with null.
+ */
 export async function getMyProfile() {
   const userId = await getUserId()
   const [row] = await db.select().from(member).where(eq(member.userId, userId)).limit(1)
-  return row ?? null
+  if (row) return row
+
+  const session = await auth.api.getSession({ headers: await headers() })
+  await createMemberProfile({ name: session?.user?.name ?? 'Üye', email: session?.user?.email ?? '' })
+  const [created] = await db.select().from(member).where(eq(member.userId, userId)).limit(1)
+  return created ?? null
 }
 
 /** Validates a referral code exists. Used by the sign-up form. */
