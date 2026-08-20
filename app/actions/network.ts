@@ -16,7 +16,6 @@ import { legSummaries } from '@/lib/services/volume.service'
 import { evaluateCareer, type CareerMetrics } from '@/lib/services/career.service'
 import { totalEarnings } from '@/lib/services/commission.service'
 import { getDemoMarketScenarios } from '@/lib/network/demo-market-scenario'
-import { buildDemoGrowthSimulation } from '@/lib/network/demo-growth-simulation'
 import { evaluateCashback } from '@/lib/services/cashback.service'
 import { buildDemoFinanceSummary } from '@/lib/services/demo-finance.service'
 import type { CommissionRow } from '@/lib/network/types'
@@ -31,7 +30,6 @@ export async function getNetworkData() {
   if (!profile) throw new Error('Üyelik profili bulunamadı.')
 
   const rootId = profile.userId
-  const demoSimulationEnabled = process.env.VELOX_DEMO_SIMULATION !== 'false'
   const closureRows = await db
     .select({ descendantUserId: networkClosure.descendantUserId, depth: networkClosure.depth })
     .from(networkClosure)
@@ -76,19 +74,14 @@ export async function getNetworkData() {
     personalVolume: safeNumber(row.personalVolume),
     joinedAt: row.createdAt.toISOString(),
   }))
-  const simulation = demoSimulationEnabled
-    ? buildDemoGrowthSimulation({ userId: profile.userId, name: profile.name, veloxId: profile.veloxId, career: profile.career })
-    : null
-  // Once the admin creates the phase-1 test dataset, use those persisted
-  // DEMO rows so the investor and admin views inspect the same test data.
-  const hasPersistedDemo = persistedMembers.some((item) => item.id.startsWith('demo-sim-'))
-  const members = hasPersistedDemo ? persistedMembers : simulation?.members ?? persistedMembers
-  const currentCareer = (hasPersistedDemo || simulation) ? simulation?.simulation.projectedCareer ?? profile.career : profile.career
+  // Admin-seeded phase-1 demo rows (member.userId starting with "demo-sim-")
+  // are real persisted DB rows and show up here like any other member —
+  // there is no separate simulated/unpersisted overlay.
+  const members = persistedMembers
+  const currentCareer = profile.career
 
   const [careers, commissionLevels, cashbackTiers] = await Promise.all([loadCareers(), loadCommissionLevels(), loadCashbackTiers()])
-  // The simulated view is a training dataset and exposes all configured
-  // depths for review. It never changes the member's persisted career.
-  const unlockedDepth = (hasPersistedDemo || simulation) ? 33 : unlockedDepthFor(careers, currentCareer)
+  const unlockedDepth = unlockedDepthFor(careers, currentCareer)
 
   const summary = networkSummary(members, rootId, currentCareer)
   const tree = buildSponsorTree(members, rootId)
@@ -137,7 +130,6 @@ export async function getNetworkData() {
     marketScenarios: getDemoMarketScenarios(),
     cashbackQualification,
     demoFinance,
-    simulation: simulation?.simulation ?? null,
   }
 }
 
